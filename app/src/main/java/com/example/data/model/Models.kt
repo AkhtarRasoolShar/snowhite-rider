@@ -1,0 +1,199 @@
+package com.example.data.model
+
+import com.google.gson.annotations.SerializedName
+
+enum class ServiceTierType(val id: String, val title: String, val deliveryTime: String, val priceMultiplier: Double, val badgeText: String, val description: String) {
+    ECONO("econo", "Econo Service", "Standard 48 Hours", 1.0, "Budget Choice", "Economical care for everyday clothing. Washed, folded or ironed in 48 hours."),
+    REGULAR("regular", "Regular Care", "Standard 24 Hours", 1.25, "Most Popular", "Premium dry cleaning and steam pressing delivered in 24 hours."),
+    EXPRESS("express", "Express Same-Day", "Express 8 Hours", 1.75, "Super Fast", "Priority express washing, dry cleaning & custom pressing in 8 hours.")
+}
+
+enum class ItemCategory(val id: String, val displayName: String) {
+    MEN("men", "Men"),
+    WOMEN("women", "Women"),
+    HOUSEHOLD("household", "Household")
+}
+
+data class GarmentItem(
+    val id: String,
+    val name: String,
+    val category: ItemCategory,
+    val basePricePKR: Int,
+    val iconName: String,
+    val description: String,
+    val popularityBadge: String? = null
+)
+
+data class CareProduct(
+    val id: String,
+    val name: String,
+    val pricePKR: Int,
+    val category: String,
+    val description: String,
+    val rating: Double,
+    val volumeOrQty: String
+)
+
+data class CartItem(
+    val garmentItem: GarmentItem? = null,
+    val careProduct: CareProduct? = null,
+    var quantity: Int = 1,
+    val serviceTier: ServiceTierType = ServiceTierType.REGULAR
+) {
+    val totalAmountPKR: Int
+        get() {
+            return if (garmentItem != null) {
+                (garmentItem.basePricePKR * serviceTier.priceMultiplier * quantity).toInt()
+            } else if (careProduct != null) {
+                careProduct.pricePKR * quantity
+            } else 0
+        }
+}
+
+data class PickupSchedule(
+    val area: String = "DHA Phase 6, Karachi",
+    val streetAddress: String = "Plot 42-C, 26th Street",
+    val date: String = "Today, 31st Aug",
+    val timeSlot: String = "Afternoon (12:00 PM - 4:00 PM)",
+    val specialNotes: String = ""
+)
+
+enum class OrderStatus(val stepIndex: Int, val title: String, val subtitle: String) {
+    PLACED(0, "Order Placed", "Your order has been logged into SnowWhite system"),
+    PICKUP_ASSIGNED(1, "Driver Assigned", "SnowWhite rider is on the way to collect garments"),
+    IN_CLEANING(2, "In Cleaning & Pressing", "Garments are undergoing expert eco-cleaning"),
+    QUALITY_CHECK(3, "Quality Inspection", "Final stain check, steaming, and garment bagging"),
+    OUT_FOR_DELIVERY(4, "Out for Delivery", "Rider is delivering crisp fresh clothes to your doorstep"),
+    DELIVERED(5, "Delivered", "Order successfully fulfilled. Thank you for choosing SnowWhite!")
+}
+
+data class OrderItemRequest(
+    @SerializedName("item") val item: String? = null,
+    @SerializedName("qty") val qty: Int? = null,
+    @SerializedName("price") val price: Int? = null
+)
+
+data class CreateOrderRequest(
+    @SerializedName("customer_id") val customer_id: Int? = 1,
+    @SerializedName("customer_name") val customer_name: String? = "Customer",
+    @SerializedName("customer_phone") val customer_phone: String? = "+923000000000",
+    @SerializedName("pickup_address") val pickup_address: String? = null,
+    @SerializedName("pickup_time_slot") val pickup_time_slot: String? = null,
+    @SerializedName("service_tier") val service_tier: String? = null,
+    @SerializedName("total_amount") val total_amount: Int? = null,
+    @SerializedName("items") val items: List<OrderItemRequest>? = null
+)
+
+data class CreateOrderResponse(
+    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("orderId") val orderId: String? = null,
+    @SerializedName("order_id") val order_id: String? = null,
+    @SerializedName("trackingCode") val trackingCode: String? = null,
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("estimatedDelivery") val estimatedDelivery: String? = null,
+    @SerializedName("riderName") val riderName: String? = null,
+    @SerializedName("riderPhone") val riderPhone: String? = null,
+    @SerializedName("message") val message: String? = null
+)
+
+data class RemoteOrder(
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("order_id") val order_id: String? = null,
+    @SerializedName("orderId") val orderId: String? = null,
+    @SerializedName("date") val date: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("order_date") val orderDate: String? = null,
+    @SerializedName("service_tier") val service_tier: String? = null,
+    @SerializedName("pickup_address") val pickup_address: String? = null,
+    @SerializedName("total_amount") val total_amount: Int? = 0,
+    @SerializedName("totalAmountPKR") val totalAmountPKR: Int? = 0,
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("items") val items: List<OrderItemRequest>? = null
+) {
+    val displayOrderId: String
+        get() = order_id ?: orderId ?: id ?: "SW-1001"
+
+    val displayDate: String
+        get() {
+            val raw = date ?: createdAt ?: orderDate
+            return if (!raw.isNullOrBlank() && !raw.equals("N/A", ignoreCase = true)) {
+                raw
+            } else {
+                "Just now"
+            }
+        }
+
+    val displayAmount: Int
+        get() = if (total_amount != null && total_amount > 0) total_amount else (totalAmountPKR ?: 0)
+
+    val displayStatus: String
+        get() = status ?: "COLLECTING"
+}
+
+data class GetOrdersResponse(
+    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("orders") val orders: List<RemoteOrder>? = null
+)
+
+data class CustomerReview(
+    val id: String,
+    val authorName: String,
+    val city: String,
+    val rating: Int,
+    val comment: String,
+    val dateAgo: String,
+    val verifiedBuyer: Boolean = true
+)
+
+data class LoginRequest(
+    @SerializedName("phone") val phone: String? = null,
+    @SerializedName("password") val password: String? = null
+)
+
+data class RegisterRequest(
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("phone") val phone: String? = null,
+    @SerializedName("password") val password: String? = null
+)
+
+data class AuthResponse(
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("customer_id") val customer_id: Int? = null,
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("phone") val phone: String? = null,
+    @SerializedName("customer_name") val customer_name: String? = null,
+    @SerializedName("customer_phone") val customer_phone: String? = null,
+    @SerializedName("error") val error: String? = null
+)
+
+data class EmailInvoiceRequest(
+    @SerializedName("order_id") val order_id: String? = null,
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("invoice_number") val invoice_number: String? = null
+)
+
+data class EmailInvoiceResponse(
+    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("deep_link") val deep_link: String? = null
+)
+
+data class ServiceItem(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("base_fare") val base_fare: String? = null,
+    @SerializedName("per_km_rate") val per_km_rate: String? = null,
+    @SerializedName("price") val price: Double? = null,
+    @SerializedName("category") val category: String? = null
+)
+
+data class ApiResponse<T>(
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("data") val data: T? = null
+)
+
