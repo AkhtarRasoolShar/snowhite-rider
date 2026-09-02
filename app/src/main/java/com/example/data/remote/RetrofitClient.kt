@@ -136,6 +136,8 @@ object RetrofitClient {
                                 "pickup_address": "PECHS Block 2, Karachi",
                                 "total_amount": 3150,
                                 "status": "OUT_FOR_DELIVERY",
+                                "rider_name": "Tariq Mahmood",
+                                "rider_phone": "03008274192",
                                 "items": [
                                     {"item": "Curtains / Drapery", "qty": 2, "price": 1800}
                                 ]
@@ -150,6 +152,63 @@ object RetrofitClient {
                     .protocol(Protocol.HTTP_1_1)
                     .request(request)
                     .body(mockOrdersResponse.toResponseBody("application/json".toMediaType()))
+                    .build()
+            }
+
+            if (url.contains("action=get_categories")) {
+                val mockCategoriesResponse = """
+                    {
+                        "status": "success",
+                        "success": true,
+                        "data": [
+                            {"id": 1, "name": "Men", "type": "garment"},
+                            {"id": 2, "name": "Women", "type": "garment"},
+                            {"id": 3, "name": "Household", "type": "household"},
+                            {"id": 4, "name": "Premium Care", "type": "premium"}
+                        ]
+                    }
+                """.trimIndent()
+
+                return Response.Builder()
+                    .code(200)
+                    .message("OK")
+                    .protocol(Protocol.HTTP_1_1)
+                    .request(request)
+                    .body(mockCategoriesResponse.toResponseBody("application/json".toMediaType()))
+                    .build()
+            }
+
+            if (url.contains("action=get_products")) {
+                val mockProductsResponse = """
+                    {
+                        "status": "success",
+                        "success": true,
+                        "data": [
+                            {"id": 101, "category_id": 1, "name": "2-Piece Suit", "description": "Professional dry cleaning & steam press for 2-piece suit", "price": 350.0},
+                            {"id": 102, "category_id": 1, "name": "Gentlemen Shirt", "description": "Crisp washing & hanger press", "price": 150.0},
+                            {"id": 103, "category_id": 1, "name": "Trousers / Pants", "description": "Stain treatment & sharp crease press", "price": 180.0},
+                            {"id": 104, "category_id": 1, "name": "Shalwar Kameez", "description": "Traditional 2-piece suit gentle care", "price": 300.0},
+                            {"id": 201, "category_id": 2, "name": "Lawn 3-Piece Suit", "description": "Delicate fabric wash & soft steam press", "price": 400.0},
+                            {"id": 202, "category_id": 2, "name": "Designer Dress / Gown", "description": "Special organic solvent cleaning for embroidery", "price": 800.0},
+                            {"id": 203, "category_id": 2, "name": "Silk Dupatta", "description": "Eco silk care & hand wash finish", "price": 120.0},
+                            {"id": 204, "category_id": 2, "name": "Abaya / Hijab", "description": "Deep clean & steam polish", "price": 250.0},
+                            {"id": 301, "category_id": 3, "name": "Double Bed Sheet Set", "description": "Sanitizing wash & flat iron press", "price": 350.0},
+                            {"id": 302, "category_id": 3, "name": "Blanket / Comforter", "description": "Deep fluff drying & anti-allergen clean", "price": 700.0},
+                            {"id": 303, "category_id": 3, "name": "Curtains / Drapery (Pair)", "description": "Dust extraction & gentle steam treatment", "price": 900.0},
+                            {"id": 304, "category_id": 3, "name": "Cushion Covers", "description": "Fabric softening wash", "price": 100.0},
+                            {"id": 401, "category_id": 4, "name": "Leather Jacket", "description": "Specialized leather conditioning & polish", "price": 1200.0},
+                            {"id": 402, "category_id": 4, "name": "Sherwani / Wedding Wear", "description": "Handcrafted stain removal & velvet care", "price": 1800.0},
+                            {"id": 403, "category_id": 4, "name": "Bridal Lehenga", "description": "Intricate embroidery protection & steam finishing", "price": 2500.0}
+                        ]
+                    }
+                """.trimIndent()
+
+                return Response.Builder()
+                    .code(200)
+                    .message("OK")
+                    .protocol(Protocol.HTTP_1_1)
+                    .request(request)
+                    .body(mockProductsResponse.toResponseBody("application/json".toMediaType()))
                     .build()
             }
 

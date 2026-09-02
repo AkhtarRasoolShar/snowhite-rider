@@ -117,7 +117,7 @@ fun DrawerMenuContent(
                         }
                         Column {
                             Text(
-                                text = "SnowWhite",
+                                text = "SnoWhite",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White

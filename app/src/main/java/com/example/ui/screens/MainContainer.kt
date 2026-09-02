@@ -308,6 +308,15 @@ fun MainContainer(
                         when (val currentScreen = uiState.currentScreen) {
                             Screen.Home -> HomeScreen(
                                 activeOrder = uiState.currentActiveOrder,
+                                categories = uiState.categories,
+                                products = uiState.products,
+                                selectedCategoryId = uiState.selectedCategoryId,
+                                onCategorySelected = { viewModel.selectCategoryTab(it) },
+                                getProductQuantity = { viewModel.getProductQuantity(it) },
+                                onAddProduct = { viewModel.addProductToCart(it) },
+                                onRemoveProduct = { viewModel.removeProductFromCart(it) },
+                                totalCartPricePKR = viewModel.totalCartPricePKR,
+                                totalCartCount = viewModel.totalCartBadgeCount,
                                 onBookNowClick = { viewModel.navigateTo(Screen.ServiceTierSelect) },
                                 onLaundryClick = { viewModel.navigateTo(Screen.ServiceTierSelect) },
                                 onProductsClick = { viewModel.navigateTo(Screen.ProductsShop) },
@@ -315,7 +324,8 @@ fun MainContainer(
                                 onTrackActiveOrderClick = {
                                     val activeId = uiState.currentActiveOrder?.orderId ?: "SW-78249"
                                     viewModel.navigateTo(Screen.LiveOrderTracking(activeId))
-                                }
+                                },
+                                onProceedToSchedule = { viewModel.navigateTo(Screen.CartCheckout) }
                             )
 
                             Screen.ServiceTierSelect -> ServiceTierSelectorScreen(
@@ -387,6 +397,9 @@ fun MainContainer(
                                 onBookNewOrderClick = { viewModel.navigateTo(Screen.ServiceTierSelect) },
                                 onViewInvoice = { remote, local ->
                                     viewModel.showInvoiceForOrder(remote, local)
+                                },
+                                onReorder = { remote, local ->
+                                    viewModel.reorderOrder(remote, local)
                                 }
                             )
 

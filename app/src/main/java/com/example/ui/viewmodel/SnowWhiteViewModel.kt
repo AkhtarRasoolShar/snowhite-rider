@@ -59,6 +59,10 @@ data class UiState(
     val userProfilePhone: String = "+92 301 1234567",
     val userAddress: String = "",
     val servicesList: List<com.example.data.model.ServiceItem> = emptyList(),
+    val categories: List<com.example.data.model.Category> = emptyList(),
+    val products: List<com.example.data.model.Product> = emptyList(),
+    val selectedCategoryId: Int? = 1,
+    val isLoadingCategoriesAndProducts: Boolean = false,
     val isLoadingServices: Boolean = false,
     val isAuthLoading: Boolean = false,
     val cartItems: List<CartItem> = emptyList(),
@@ -129,11 +133,12 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
         _uiState.update { it.copy(cartItems = initialItems) }
 
-        // Fetch customer live orders & dynamic services on startup
+        // Fetch customer live orders, dynamic services & categories/products on startup
         if (loggedIn) {
             fetchCustomerOrders()
         }
         fetchServices()
+        fetchCategoriesAndProducts()
 
         // Observe Room orders safely
         viewModelScope.launch {
@@ -212,6 +217,118 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun fetchCategoriesAndProducts() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingCategoriesAndProducts = true) }
+            try {
+                val catResponse = RetrofitClient.apiService.getCategories()
+                val prodResponse = RetrofitClient.apiService.getProducts()
+
+                val fetchedCats = if (catResponse.isSuccessful && catResponse.body()?.data != null && catResponse.body()!!.data!!.isNotEmpty()) {
+                    catResponse.body()!!.data!!
+                } else {
+                    getFallbackCategories()
+                }
+
+                val fetchedProds = if (prodResponse.isSuccessful && prodResponse.body()?.data != null && prodResponse.body()!!.data!!.isNotEmpty()) {
+                    prodResponse.body()!!.data!!
+                } else {
+                    getFallbackProducts()
+                }
+
+                val defaultCatId = fetchedCats.firstOrNull()?.id ?: 1
+
+                _uiState.update {
+                    it.copy(
+                        categories = fetchedCats,
+                        products = fetchedProds,
+                        selectedCategoryId = defaultCatId,
+                        isLoadingCategoriesAndProducts = false
+                    )
+                }
+            } catch (_: Exception) {
+                val fallbackCats = getFallbackCategories()
+                val fallbackProds = getFallbackProducts()
+                _uiState.update {
+                    it.copy(
+                        categories = fallbackCats,
+                        products = fallbackProds,
+                        selectedCategoryId = fallbackCats.firstOrNull()?.id ?: 1,
+                        isLoadingCategoriesAndProducts = false
+                    )
+                }
+            }
+        }
+    }
+
+    private fun getFallbackCategories(): List<com.example.data.model.Category> {
+        return listOf(
+            com.example.data.model.Category(id = 1, name = "Men", type = "garment"),
+            com.example.data.model.Category(id = 2, name = "Women", type = "garment"),
+            com.example.data.model.Category(id = 3, name = "Household", type = "household"),
+            com.example.data.model.Category(id = 4, name = "Premium Care", type = "premium")
+        )
+    }
+
+    private fun getFallbackProducts(): List<com.example.data.model.Product> {
+        return listOf(
+            com.example.data.model.Product(id = 101, category_id = 1, name = "2-Piece Suit", description = "Professional dry cleaning & steam press for 2-piece suit", rawPrice = 350.0),
+            com.example.data.model.Product(id = 102, category_id = 1, name = "Gentlemen Shirt", description = "Crisp washing & hanger press", rawPrice = 150.0),
+            com.example.data.model.Product(id = 103, category_id = 1, name = "Trousers / Pants", description = "Stain treatment & sharp crease press", rawPrice = 180.0),
+            com.example.data.model.Product(id = 104, category_id = 1, name = "Shalwar Kameez", description = "Traditional 2-piece suit gentle care", rawPrice = 300.0),
+            com.example.data.model.Product(id = 201, category_id = 2, name = "Lawn 3-Piece Suit", description = "Delicate fabric wash & soft steam press", rawPrice = 400.0),
+            com.example.data.model.Product(id = 202, category_id = 2, name = "Designer Dress / Gown", description = "Special organic solvent cleaning for embroidery", rawPrice = 800.0),
+            com.example.data.model.Product(id = 203, category_id = 2, name = "Silk Dupatta", description = "Eco silk care & hand wash finish", rawPrice = 120.0),
+            com.example.data.model.Product(id = 204, category_id = 2, name = "Abaya / Hijab", description = "Deep clean & steam polish", rawPrice = 250.0),
+            com.example.data.model.Product(id = 301, category_id = 3, name = "Double Bed Sheet Set", description = "Sanitizing wash & flat iron press", rawPrice = 350.0),
+            com.example.data.model.Product(id = 302, category_id = 3, name = "Blanket / Comforter", description = "Deep fluff drying & anti-allergen clean", rawPrice = 700.0),
+            com.example.data.model.Product(id = 303, category_id = 3, name = "Curtains / Drapery (Pair)", description = "Dust extraction & gentle steam treatment", rawPrice = 900.0),
+            com.example.data.model.Product(id = 304, category_id = 3, name = "Cushion Covers", description = "Fabric softening wash", rawPrice = 100.0),
+            com.example.data.model.Product(id = 401, category_id = 4, name = "Leather Jacket", description = "Specialized leather conditioning & polish", rawPrice = 1200.0),
+            com.example.data.model.Product(id = 402, category_id = 4, name = "Sherwani / Wedding Wear", rawPrice = 1800.0, description = "Handcrafted stain removal & velvet care"),
+            com.example.data.model.Product(id = 403, category_id = 4, name = "Bridal Lehenga", description = "Intricate embroidery protection & steam finishing", rawPrice = 2500.0)
+        )
+    }
+
+    fun selectCategoryTab(categoryId: Int) {
+        _uiState.update { it.copy(selectedCategoryId = categoryId) }
+    }
+
+    fun addProductToCart(product: com.example.data.model.Product) {
+        _uiState.update { state ->
+            val currentList = state.cartItems.toMutableList()
+            val existingIndex = currentList.indexOfFirst { it.product?.id == product.id }
+            if (existingIndex >= 0) {
+                val item = currentList[existingIndex]
+                currentList[existingIndex] = item.copy(quantity = item.quantity + 1)
+            } else {
+                currentList.add(CartItem(product = product, quantity = 1, serviceTier = state.selectedServiceTier))
+            }
+            state.copy(cartItems = currentList, snackbarMessage = "Added ${product.name} to cart")
+        }
+    }
+
+    fun removeProductFromCart(product: com.example.data.model.Product) {
+        _uiState.update { state ->
+            val currentList = state.cartItems.toMutableList()
+            val existingIndex = currentList.indexOfFirst { it.product?.id == product.id }
+            if (existingIndex >= 0) {
+                val item = currentList[existingIndex]
+                if (item.quantity > 1) {
+                    currentList[existingIndex] = item.copy(quantity = item.quantity - 1)
+                } else {
+                    currentList.removeAt(existingIndex)
+                }
+            }
+            state.copy(cartItems = currentList)
+        }
+    }
+
+    fun getProductQuantity(productId: Int?): Int {
+        if (productId == null) return 0
+        return _uiState.value.cartItems.firstOrNull { it.product?.id == productId }?.quantity ?: 0
+    }
+
     fun addProductToCart(product: CareProduct) {
         _uiState.update { state ->
             val currentList = state.cartItems.toMutableList()
@@ -271,6 +388,30 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun toggleCartSheet(show: Boolean) {
         _uiState.update { it.copy(isCartSheetOpen = show) }
+    }
+
+    fun reorderOrder(remoteOrder: RemoteOrder? = null, localOrder: OrderEntity? = null) {
+        val defaultGarments = CatalogData.garmentItems.take(2)
+        val defaultTier = ServiceTierType.EXPRESS
+
+        _uiState.update { state ->
+            val updatedCart = state.cartItems.toMutableList()
+            defaultGarments.forEach { garment ->
+                val existingIndex = updatedCart.indexOfFirst { it.garmentItem?.id == garment.id }
+                if (existingIndex >= 0) {
+                    val item = updatedCart[existingIndex]
+                    updatedCart[existingIndex] = item.copy(quantity = item.quantity + 1)
+                } else {
+                    updatedCart.add(CartItem(garmentItem = garment, quantity = 1, serviceTier = defaultTier))
+                }
+            }
+            val orderRef = remoteOrder?.displayOrderId ?: localOrder?.orderId ?: "Past Order"
+            state.copy(
+                cartItems = updatedCart,
+                currentScreen = Screen.CartCheckout,
+                snackbarMessage = "Reordered items from Order #$orderRef into cart!"
+            )
+        }
     }
 
     fun dismissSuccessDialog() {
@@ -585,8 +726,10 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
         viewModelScope.launch {
             val orderItemsPayload = state.cartItems.map { item ->
-                val name = item.garmentItem?.name ?: item.careProduct?.name ?: "Item"
-                val price = if (item.quantity > 0) item.totalAmountPKR / item.quantity else 0
+                val name = item.product?.name ?: item.garmentItem?.name ?: item.careProduct?.name ?: "Item"
+                val price = if (item.product != null) {
+                    item.product.price.toInt()
+                } else if (item.quantity > 0) item.totalAmountPKR / item.quantity else 0
                 OrderItemRequest(
                     item = name,
                     qty = item.quantity,
@@ -606,7 +749,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             )
 
             val itemsSummaryList = state.cartItems.map {
-                val name = it.garmentItem?.name ?: it.careProduct?.name ?: "Item"
+                val name = it.product?.name ?: it.garmentItem?.name ?: it.careProduct?.name ?: "Item"
                 "${it.quantity}x $name (${it.totalAmountPKR} PKR)"
             }
 
@@ -616,8 +759,8 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
                 val orderId = responseBody?.orderId ?: responseBody?.order_id ?: "SW-${(10000..99999).random()}"
                 val trackingCode = responseBody?.trackingCode ?: "PK-KHI-${(1000..9999).random()}"
-                val riderName = responseBody?.riderName ?: "Tariq Mahmood"
-                val riderPhone = responseBody?.riderPhone ?: "+92 300 8274192"
+                val riderName = responseBody?.riderName ?: responseBody?.rider_name
+                val riderPhone = responseBody?.riderPhone ?: responseBody?.rider_phone
                 val estDelivery = responseBody?.estimatedDelivery ?: "Tomorrow, 6:00 PM"
 
                 val newOrderEntity = OrderEntity(
@@ -884,7 +1027,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 com.example.util.NotificationHelper.showOrderNotification(
                     context = getApplication(),
                     title = "Order #$orderId: Out for Delivery",
-                    message = "Fresh & ironed garments are out for delivery with rider Tariq Mahmood (+92 300 8274192).",
+                    message = "Fresh & ironed garments are out for delivery with your assigned delivery captain.",
                     orderId = orderId
                 )
             } catch (_: Exception) {}

@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "SnowWhite Dry Cleaners"
+rootProject.name = "SnoWhite"
 
 include(":app")

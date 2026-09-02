@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.request.ImageRequest
 import coil.compose.AsyncImage
 import com.example.data.util.InvoiceGenerator
 import com.example.ui.components.InvoiceData
@@ -210,8 +211,12 @@ fun InvoiceScreen(
                     ) {
                         Column {
                             AsyncImage(
-                                model = "https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png",
-                                contentDescription = "SnowWhite Logo",
+                                model = ImageRequest.Builder(context)
+                                    .data("https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png")
+                                    .allowHardware(false)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "SnoWhite Logo",
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.height(38.dp)
                             )

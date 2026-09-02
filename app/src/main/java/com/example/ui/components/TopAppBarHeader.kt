@@ -39,6 +39,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
+import com.example.R
 import coil.compose.AsyncImage
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.GradientAccentBlue
@@ -91,9 +94,16 @@ fun TopAppBarHeader(
                         .clickable { }
                         .padding(horizontal = 4.dp)
                 ) {
+                    val context = LocalContext.current
                     AsyncImage(
-                        model = "https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png",
-                        contentDescription = "SnowWhite Dry Cleaners",
+                        model = ImageRequest.Builder(context)
+                            .data("https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png")
+                            .allowHardware(false)
+                            .crossfade(true)
+                            .error(R.mipmap.ic_launcher)
+                            .fallback(R.mipmap.ic_launcher)
+                            .build(),
+                        contentDescription = "SnoWhite Dry Cleaners",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .height(40.dp)

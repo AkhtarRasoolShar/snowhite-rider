@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.request.ImageRequest
 import coil.compose.AsyncImage
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.LightBlueBorder
@@ -162,9 +163,14 @@ fun InvoiceDialog(
                         verticalAlignment = Alignment.Top
                     ) {
                         Column {
+                            val context = LocalContext.current
                             AsyncImage(
-                                model = "https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png",
-                                contentDescription = "SnowWhite Logo",
+                                model = ImageRequest.Builder(context)
+                                    .data("https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png")
+                                    .allowHardware(false)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "SnoWhite Logo",
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.height(36.dp)
                             )

@@ -2,12 +2,14 @@ package com.example.data.remote
 
 import com.example.data.model.ApiResponse
 import com.example.data.model.AuthResponse
+import com.example.data.model.Category
 import com.example.data.model.CreateOrderRequest
 import com.example.data.model.CreateOrderResponse
 import com.example.data.model.EmailInvoiceRequest
 import com.example.data.model.EmailInvoiceResponse
 import com.example.data.model.GetOrdersResponse
 import com.example.data.model.LoginRequest
+import com.example.data.model.Product
 import com.example.data.model.RegisterRequest
 import com.example.data.model.ServiceItem
 import retrofit2.Response
@@ -51,4 +53,15 @@ interface SnowWhiteApiService {
     suspend fun getServices(
         @Query("action") action: String = "get_services"
     ): Response<ApiResponse<List<ServiceItem>>>
+
+    @GET("routes.php?action=get_categories")
+    suspend fun getCategories(): Response<ApiResponse<List<Category>>>
+
+    @GET("routes.php?action=get_products&is_app=true")
+    suspend fun getActiveProducts(): Response<ApiResponse<List<Product>>>
+
+    @GET("routes.php")
+    suspend fun getProducts(
+        @Query("action") action: String = "get_products"
+    ): Response<ApiResponse<List<Product>>>
 }

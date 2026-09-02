@@ -164,69 +164,108 @@ fun LiveOrderTrackingScreen(
         }
 
         // Assigned Driver Card
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
-        ) {
-            Row(
+        if (!order.riderName.isNullOrBlank()) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(SoftLightBlue),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Driver Avatar",
+                                tint = DeepBlue,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = order.riderName!!,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.Default.Verified, contentDescription = "Verified Rider", tint = DeepBlue, modifier = Modifier.size(14.dp))
+                            }
+                            Text(
+                                text = "SnowWhite Delivery Captain",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Call Driver Action
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(SoftLightBlue),
+                            .background(SuccessGreen)
+                            .clickable { }
+                            .testTag("call_rider_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = "Call Rider", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        } else {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFEF3C7)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Driver Avatar",
-                            tint = DeepBlue,
-                            modifier = Modifier.size(26.dp)
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Pending Captain",
+                            tint = Color(0xFFD97706),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-
                     Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = order.riderName,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(Icons.Default.Verified, contentDescription = "Verified Rider", tint = DeepBlue, modifier = Modifier.size(14.dp))
-                        }
-                        Text(
-                            text = "SnowWhite Karachi Rider • Suzuki Van KHI-4819",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // Call Driver Action
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(SuccessGreen)
-                        .clickable { }
-                        .testTag("call_rider_button"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Call, contentDescription = "Call Rider", tint = Color.White, modifier = Modifier.size(20.dp))
+                    Text(
+                        text = "Waiting for a Captain to accept your order...",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF64748B)
+                    )
                 }
             }
         }
@@ -251,6 +290,8 @@ fun LiveOrderTrackingScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
+                val brandTeal = Color(0xFF00B4D8)
+
                 OrderStatus.values().forEach { status ->
                     val isCompleted = status.stepIndex < currentStep
                     val isCurrent = status.stepIndex == currentStep
@@ -266,8 +307,8 @@ fun LiveOrderTrackingScreen(
                                 .clip(CircleShape)
                                 .background(
                                     when {
+                                        isCurrent -> brandTeal
                                         isCompleted -> SuccessGreen
-                                        isCurrent -> DeepBlue
                                         else -> Color(0xFFE2E8F0)
                                     }
                                 ),
@@ -293,7 +334,7 @@ fun LiveOrderTrackingScreen(
                                 fontSize = 14.sp,
                                 fontWeight = if (isCurrent || isCompleted) FontWeight.Bold else FontWeight.Medium,
                                 color = when {
-                                    isCurrent -> DeepBlue
+                                    isCurrent -> brandTeal
                                     isCompleted -> SuccessGreen
                                     else -> Color(0xFF64748B)
                                 }

@@ -24,6 +24,29 @@ data class GarmentItem(
     val popularityBadge: String? = null
 )
 
+data class Category(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("type") val type: String? = null
+)
+
+data class Product(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("category_id") val category_id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("price") val rawPrice: Any? = null
+) {
+    val price: Double
+        get() {
+            return when (rawPrice) {
+                is Number -> rawPrice.toDouble()
+                is String -> rawPrice.replace("Rs.", "").replace("PKR", "").trim().toDoubleOrNull() ?: 0.0
+                else -> 0.0
+            }
+        }
+}
+
 data class CareProduct(
     val id: String,
     val name: String,
@@ -37,6 +60,7 @@ data class CareProduct(
 data class CartItem(
     val garmentItem: GarmentItem? = null,
     val careProduct: CareProduct? = null,
+    val product: Product? = null,
     var quantity: Int = 1,
     val serviceTier: ServiceTierType = ServiceTierType.REGULAR
 ) {
@@ -46,6 +70,8 @@ data class CartItem(
                 (garmentItem.basePricePKR * serviceTier.priceMultiplier * quantity).toInt()
             } else if (careProduct != null) {
                 careProduct.pricePKR * quantity
+            } else if (product != null) {
+                ((product.price ?: 0.0) * quantity).toInt()
             } else 0
         }
 }
@@ -93,6 +119,8 @@ data class CreateOrderResponse(
     @SerializedName("estimatedDelivery") val estimatedDelivery: String? = null,
     @SerializedName("riderName") val riderName: String? = null,
     @SerializedName("riderPhone") val riderPhone: String? = null,
+    @SerializedName("rider_name") val rider_name: String? = null,
+    @SerializedName("rider_phone") val rider_phone: String? = null,
     @SerializedName("message") val message: String? = null
 )
 
@@ -108,7 +136,11 @@ data class RemoteOrder(
     @SerializedName("total_amount") val total_amount: Int? = 0,
     @SerializedName("totalAmountPKR") val totalAmountPKR: Int? = 0,
     @SerializedName("status") val status: String? = null,
-    @SerializedName("items") val items: List<OrderItemRequest>? = null
+    @SerializedName("items") val items: List<OrderItemRequest>? = null,
+    @SerializedName("rider_name") val rider_name: String? = null,
+    @SerializedName("rider_phone") val rider_phone: String? = null,
+    @SerializedName("riderName") val riderNameAlt: String? = null,
+    @SerializedName("riderPhone") val riderPhoneAlt: String? = null
 ) {
     val displayOrderId: String
         get() = order_id ?: orderId ?: id ?: "SW-1001"
@@ -127,8 +159,16 @@ data class RemoteOrder(
         get() = if (total_amount != null && total_amount > 0) total_amount else (totalAmountPKR ?: 0)
 
     val displayStatus: String
-        get() = status ?: "COLLECTING"
+        get() = (status ?: "COLLECTING").replace("_", " ").uppercase()
+
+    val displayRiderName: String?
+        get() = rider_name ?: riderNameAlt
+
+    val displayRiderPhone: String?
+        get() = rider_phone ?: riderPhoneAlt
 }
+
+typealias CustomerOrder = RemoteOrder
 
 data class GetOrdersResponse(
     @SerializedName("success") val success: Boolean? = true,

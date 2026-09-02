@@ -75,6 +75,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.launch
@@ -229,9 +231,14 @@ fun LoginScreen(
                                 .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
+                            val context = LocalContext.current
                             SubcomposeAsyncImage(
-                                model = "https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png",
-                                contentDescription = "SnowWhite Logo",
+                                model = ImageRequest.Builder(context)
+                                    .data("https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png")
+                                    .allowHardware(false)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "SnoWhite Logo",
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier
                                     .height(52.dp)

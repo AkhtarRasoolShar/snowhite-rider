@@ -16,8 +16,8 @@ data class OrderEntity(
     val itemCount: Int,
     val itemsSummaryJson: String,
     val statusStepIndex: Int,
-    val riderName: String,
-    val riderPhone: String,
+    val riderName: String? = null,
+    val riderPhone: String? = null,
     val estimatedDelivery: String,
     val createdAtTimestamp: Long = System.currentTimeMillis()
 )

@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -74,8 +76,14 @@ import com.example.ui.theme.SoftLightBlue
 import com.example.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Schedule
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.example.data.util.InvoiceGenerator
@@ -89,7 +97,8 @@ fun OrderHistoryScreen(
     onRefreshOrders: () -> Unit,
     onSelectOrder: (String) -> Unit,
     onBookNewOrderClick: () -> Unit,
-    onViewInvoice: ((RemoteOrder?, OrderEntity?) -> Unit)? = null
+    onViewInvoice: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
+    onReorder: ((RemoteOrder?, OrderEntity?) -> Unit)? = null
 ) {
     var selectedRemoteOrder by remember { mutableStateOf<RemoteOrder?>(null) }
     var selectedLocalOrder by remember { mutableStateOf<OrderEntity?>(null) }
@@ -297,13 +306,28 @@ fun OrderHistoryScreen(
                                     )
 
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .clickable { openRemoteSheet(order) }
-                                            .testTag("view_details_button_${order.displayOrderId}")
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("View Details >", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
-                                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = DeepBlue, modifier = Modifier.size(16.dp))
+                                        OutlinedButton(
+                                            onClick = { onReorder?.invoke(order, null) },
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            modifier = Modifier.height(32.dp).testTag("reorder_button_${order.displayOrderId}")
+                                        ) {
+                                            Icon(Icons.Default.Autorenew, contentDescription = null, tint = DeepBlue, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Reorder", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .clickable { openRemoteSheet(order) }
+                                                .testTag("view_details_button_${order.displayOrderId}")
+                                        ) {
+                                            Text("Details >", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                                        }
                                     }
                                 }
                             }
@@ -372,13 +396,28 @@ fun OrderHistoryScreen(
                                     )
 
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .clickable { openLocalSheet(order) }
-                                            .testTag("view_details_button_${order.orderId}")
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("View Details >", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
-                                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = DeepBlue, modifier = Modifier.size(16.dp))
+                                        OutlinedButton(
+                                            onClick = { onReorder?.invoke(null, order) },
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            modifier = Modifier.height(32.dp).testTag("reorder_button_${order.orderId}")
+                                        ) {
+                                            Icon(Icons.Default.Autorenew, contentDescription = null, tint = DeepBlue, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Reorder", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .clickable { openLocalSheet(order) }
+                                                .testTag("view_details_button_${order.orderId}")
+                                        ) {
+                                            Text("Details >", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                                        }
                                     }
                                 }
                             }
@@ -420,6 +459,10 @@ fun OrderHistoryScreen(
                     closeSheet()
                     onViewInvoice?.invoke(remote, local)
                 },
+                onReorder = { remote, local ->
+                    closeSheet()
+                    onReorder?.invoke(remote, local)
+                },
                 onClose = { closeSheet() }
             )
         }
@@ -433,6 +476,7 @@ private fun OrderDetailsBottomSheetContent(
     localOrder: OrderEntity?,
     onTrackOrder: (String) -> Unit,
     onViewInvoice: (RemoteOrder?, OrderEntity?) -> Unit,
+    onReorder: (RemoteOrder?, OrderEntity?) -> Unit,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -515,6 +559,225 @@ private fun OrderDetailsBottomSheetContent(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(text = "Service Tier", fontSize = 11.sp, color = Color(0xFF64748B))
                     Text(text = tier, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                }
+            }
+        }
+
+        // Assigned Captain / Rider Info Section with WhatsApp Contact Button
+        val realRiderName = remoteOrder?.displayRiderName?.takeIf { it.isNotBlank() }
+            ?: localOrder?.riderName?.takeIf { it.isNotBlank() }
+
+        val realRiderPhone = remoteOrder?.displayRiderPhone?.takeIf { it.isNotBlank() }
+            ?: localOrder?.riderPhone?.takeIf { it.isNotBlank() }
+
+        if (!realRiderName.isNullOrBlank()) {
+            val cleanPhone = (realRiderPhone ?: "").removePrefix("+92").removePrefix("92").removePrefix("0").replace(" ", "").trim()
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, LightBlueBorder, RoundedCornerShape(16.dp))
+                    .testTag("your_captain_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(SoftLightBlue),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Rider Avatar",
+                                tint = DeepBlue,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Your Captain",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF64748B)
+                            )
+                            Text(
+                                text = realRiderName,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F172A)
+                            )
+                            if (cleanPhone.isNotBlank()) {
+                                Text(
+                                    text = "Contact: +92 $cleanPhone",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF64748B)
+                                )
+                            }
+                        }
+                    }
+
+                    if (cleanPhone.isNotBlank()) {
+                        Button(
+                            onClick = {
+                                val whatsappUrl = "https://wa.me/92$cleanPhone"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "Opening WhatsApp for +92 $cleanPhone", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("whatsapp_captain_button")
+                        ) {
+                            Text("WhatsApp", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        } else {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFEF3C7)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Pending Captain",
+                            tint = Color(0xFFD97706),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Waiting for a Captain to accept your order...",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF64748B)
+                    )
+                }
+            }
+        }
+
+        // Live Order Progress Timeline (Teal #00B4D8 for active step)
+        val localStatusString = localOrder?.let { OrderStatus.values().getOrNull(it.statusStepIndex.coerceIn(0, 4))?.name }
+        val rawStatusString = (remoteOrder?.status ?: remoteOrder?.displayStatus ?: localStatusString ?: "COLLECTING").trim().uppercase().replace(" ", "_")
+        val currentStepIndex = when {
+            rawStatusString.contains("DELIVERED") || rawStatusString.contains("COMPLETED") -> 4
+            rawStatusString.contains("OUT_FOR_DELIVERY") || rawStatusString.contains("DISPATCHED") -> 3
+            rawStatusString.contains("IN_WASHING") || rawStatusString.contains("WASHING") || rawStatusString.contains("CLEANING") -> 2
+            rawStatusString.contains("RECEIVED_AT_HUB") || rawStatusString.contains("RECEIVED") || rawStatusString.contains("HUB") -> 1
+            else -> 0
+        }
+
+        val brandTeal = Color(0xFF00B4D8)
+        val timelineSteps = listOf(
+            Pair("COLLECTING", "Order Placed & Pickup"),
+            Pair("RECEIVED AT HUB", "Garments at Main Facility"),
+            Pair("IN WASHING", "Eco Cleaning & Steam Pressing"),
+            Pair("OUT FOR DELIVERY", "Rider Out For Doorstep Delivery"),
+            Pair("DELIVERED", "Order Fully Delivered")
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Tracking Timeline",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF0F172A)
+            )
+
+            timelineSteps.forEachIndexed { index, (stepTitle, stepSub) ->
+                val isCompleted = index < currentStepIndex
+                val isCurrent = index == currentStepIndex
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when {
+                                    isCurrent -> brandTeal
+                                    isCompleted -> SuccessGreen
+                                    else -> Color(0xFFE2E8F0)
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isCompleted) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        } else {
+                            Text(
+                                text = (index + 1).toString(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isCurrent) Color.White else Color(0xFF64748B)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = stepTitle,
+                            fontSize = 13.sp,
+                            fontWeight = if (isCurrent) FontWeight.ExtraBold else if (isCompleted) FontWeight.Bold else FontWeight.Normal,
+                            color = when {
+                                isCurrent -> brandTeal
+                                isCompleted -> SuccessGreen
+                                else -> Color(0xFF94A3B8)
+                            }
+                        )
+                        Text(
+                            text = stepSub,
+                            fontSize = 11.sp,
+                            color = Color(0xFF64748B)
+                        )
+                    }
                 }
             }
         }
@@ -645,16 +908,23 @@ private fun OrderDetailsBottomSheetContent(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedButton(
-                    onClick = onClose,
+                    onClick = { onReorder(remoteOrder, localOrder) },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .weight(1f)
                         .height(46.dp)
+                        .testTag("reorder_from_sheet_button")
                 ) {
-                    Text("Close", color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Default.Autorenew, contentDescription = null, tint = DeepBlue, modifier = Modifier.size(16.dp))
+                        Text("Reorder", color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
 
                 Button(
