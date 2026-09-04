@@ -65,6 +65,8 @@ import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.LightBlueBorder
 import com.example.ui.theme.SoftLightBlue
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+
 @Composable
 fun ItemSelectionScreen(
     selectedCategory: ItemCategory,
@@ -77,7 +79,8 @@ fun ItemSelectionScreen(
     onRemoveGarment: (GarmentItem) -> Unit,
     totalCartCount: Int,
     totalCartPricePKR: Int,
-    onProceedToSchedule: () -> Unit
+    onProceedToSchedule: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     val filteredItems = CatalogData.garmentItems.filter { item ->
         val matchesCategory = item.category == selectedCategory
@@ -164,12 +167,27 @@ fun ItemSelectionScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Select Laundry Items",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF1E293B)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier.testTag("items_back_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color(0xFF1E293B)
+                            )
+                        }
+                        Text(
+                            text = "Select Laundry Items",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF1E293B)
+                        )
+                    }
 
                     Box(
                         modifier = Modifier

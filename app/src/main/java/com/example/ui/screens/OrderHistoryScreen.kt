@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.CheckCircle
@@ -86,7 +87,14 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Schedule
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import android.util.Log
 import com.example.data.util.InvoiceGenerator
+
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+
+import com.example.data.local.SessionManager
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,12 +106,35 @@ fun OrderHistoryScreen(
     onSelectOrder: (String) -> Unit,
     onBookNewOrderClick: () -> Unit,
     onViewInvoice: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
-    onReorder: ((RemoteOrder?, OrderEntity?) -> Unit)? = null
+    onReorder: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
+    onFetchOrders: ((Int) -> Unit)? = null,
+    onBackClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val userId = SessionManager(context).getUserId()
+
     var selectedRemoteOrder by remember { mutableStateOf<RemoteOrder?>(null) }
     var selectedLocalOrder by remember { mutableStateOf<OrderEntity?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+
+    // Forceful fetch on composition and real-time status sync polling loop every 5 seconds
+    LaunchedEffect(userId) {
+        Log.d("ORDERS_DEBUG", "Fetching orders for ID: $userId")
+        if (userId > 0) {
+            if (onFetchOrders != null) {
+                onFetchOrders(userId)
+            } else {
+                onRefreshOrders()
+            }
+        } else {
+            onRefreshOrders()
+        }
+        while (true) {
+            kotlinx.coroutines.delay(5000L)
+            onRefreshOrders()
+        }
+    }
 
     val closeSheet: () -> Unit = {
         scope.launch {
@@ -143,13 +174,19 @@ fun OrderHistoryScreen(
         }
     }
 
-    Column(
+    PullToRefreshBox(
+        isRefreshing = isFetchingOrders,
+        onRefresh = onRefreshOrders,
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
             .testTag("order_history_screen")
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp)
+        ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -157,18 +194,33 @@ fun OrderHistoryScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "My Laundry Orders",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Connected live to API (Customer Orders)",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.testTag("orders_back_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                Column {
+                    Text(
+                        text = "My Laundry Orders",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Connected live to API (Customer Orders)",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             IconButton(
@@ -337,7 +389,7 @@ fun OrderHistoryScreen(
 
                 if (filteredLocalOrders.isNotEmpty()) {
                     items(filteredLocalOrders, key = { "local_${it.orderId}" }) { order ->
-                        val statusObj = OrderStatus.values().getOrNull(order.statusStepIndex.coerceIn(0, OrderStatus.values().lastIndex)) ?: OrderStatus.PLACED
+                        val statusObj = OrderStatus.values().getOrNull(order.statusStepIndex.coerceIn(0, OrderStatus.values().lastIndex)) ?: OrderStatus.COLLECTING
                         val isActiveTracking = order.statusStepIndex < 5
                         val displayDateStr = if (!order.date.equals("N/A", ignoreCase = true) && order.date.isNotBlank()) order.date else "Just now"
 
@@ -426,6 +478,7 @@ fun OrderHistoryScreen(
                 }
             }
         }
+    }
     }
 
     // ModalBottomSheet for Order Details
@@ -684,7 +737,7 @@ private fun OrderDetailsBottomSheetContent(
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Waiting for a Captain to accept your order...",
+                        text = "Waiting for a Captain to accept the order",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF64748B)
@@ -866,17 +919,34 @@ private fun OrderDetailsBottomSheetContent(
 
                 Button(
                     onClick = {
+                        val session = com.example.data.local.SessionManager(context)
+                        val userName = session.getUserName()?.takeIf { it.isNotBlank() } ?: "Valued Customer"
+                        val userPhone = session.getUserPhone()?.takeIf { it.isNotBlank() } ?: "+92 300 0000000"
+
+                        val itemsList = remoteOrder?.items?.map { req ->
+                            val qty = req.qty ?: 1
+                            val name = req.item ?: "Garment Service"
+                            val total = req.price ?: 0
+                            val unit = if (qty > 0) total / qty else total
+                            com.example.ui.components.InvoiceItemData(
+                                description = name,
+                                quantity = qty,
+                                unitPricePKR = unit,
+                                totalPKR = total
+                            )
+                        } ?: emptyList()
+
                         val subtotal = remoteOrder?.displayAmount ?: localOrder?.totalAmountPKR ?: 0
                         val deliveryFee = if (subtotal > 1500 || subtotal == 0) 0 else 150
                         val invoice = com.example.ui.components.InvoiceData(
                             invoiceNumber = "INV-2026-$orderId",
                             orderId = orderId,
                             invoiceDate = date,
-                            customerName = "Akhtar Hussain",
-                            customerPhone = "+92 301 1234567",
+                            customerName = userName,
+                            customerPhone = userPhone,
                             deliveryAddress = address,
                             serviceTier = tier,
-                            items = listOf(com.example.ui.components.InvoiceItemData("Dry Cleaning & Pressing Care", 1, subtotal, subtotal)),
+                            items = if (itemsList.isNotEmpty()) itemsList else listOf(com.example.ui.components.InvoiceItemData("Dry Cleaning & Pressing Care", 1, subtotal, subtotal)),
                             subtotalPKR = subtotal,
                             deliveryFeePKR = deliveryFee,
                             grandTotalPKR = subtotal + deliveryFee,
@@ -1035,5 +1105,32 @@ private fun getStatusColors(status: String): Pair<Color, Color> {
         "DELIVERED" -> Pair(SuccessGreen.copy(alpha = 0.15f), SuccessGreen)
         else -> Pair(SoftLightBlue, DeepBlue)
     }
+}
+
+@Composable
+fun OrdersScreen(
+    remoteOrders: List<RemoteOrder>,
+    localOrdersList: List<OrderEntity>,
+    isFetchingOrders: Boolean,
+    onRefreshOrders: () -> Unit,
+    onSelectOrder: (String) -> Unit,
+    onBookNewOrderClick: () -> Unit,
+    onViewInvoice: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
+    onReorder: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
+    onFetchOrders: ((Int) -> Unit)? = null,
+    onBackClick: () -> Unit = {}
+) {
+    OrderHistoryScreen(
+        remoteOrders = remoteOrders,
+        localOrdersList = localOrdersList,
+        isFetchingOrders = isFetchingOrders,
+        onRefreshOrders = onRefreshOrders,
+        onSelectOrder = onSelectOrder,
+        onBookNewOrderClick = onBookNewOrderClick,
+        onViewInvoice = onViewInvoice,
+        onReorder = onReorder,
+        onFetchOrders = onFetchOrders,
+        onBackClick = onBackClick
+    )
 }
 

@@ -222,14 +222,14 @@ fun InvoiceScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "SnowWhite Dry Cleaners (Pvt) Ltd.",
+                                text = "SnoWhite Dry Cleaners (Pvt) Ltd.",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = DeepBlue
                             )
                             Text(text = "NTN: 2847291-3 • Reg: KHI-89240", fontSize = 10.sp, color = Color(0xFF64748B))
                             Text(text = "Plot 42-C, 26th St, DHA Phase 6, Karachi", fontSize = 10.sp, color = Color(0xFF64748B))
-                            Text(text = "Helpdesk: +92 300 0000000", fontSize = 10.sp, color = Color(0xFF64748B))
+                            Text(text = "Helpdesk (WhatsApp): +92 301 8637011", fontSize = 10.sp, color = Color(0xFF64748B))
                         }
 
                         // Badge Right
@@ -425,7 +425,7 @@ fun InvoiceScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Thank you for choosing SnowWhite Dry Cleaners!",
+                            text = "Thank you for choosing SnoWhite Dry Cleaners!",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = DeepBlue
@@ -541,7 +541,7 @@ fun InvoiceScreen(
                                 onClick = {
                                     val shareIntent = Intent().apply {
                                         action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, "SnowWhite Invoice Deep Link: $deepLink")
+                                        putExtra(Intent.EXTRA_TEXT, "SnoWhite Invoice Deep Link: $deepLink")
                                         type = "text/plain"
                                     }
                                     context.startActivity(Intent.createChooser(shareIntent, "Share Deep Link"))

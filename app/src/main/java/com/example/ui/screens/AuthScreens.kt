@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,10 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lock
@@ -34,52 +35,44 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.GradientAccentBlue
 import com.example.ui.theme.LightBlueBorder
-import com.example.ui.theme.SoftLightBlue
 import kotlinx.coroutines.delay
-
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.GMobiledata
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import coil.request.ImageRequest
-import coil.compose.AsyncImage
-import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.launch
+
+private val BrightBlue = Color(0xFF0088FF)
 
 @Composable
 fun SplashScreen(
@@ -115,7 +108,7 @@ fun SplashScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.AcUnit,
-                    contentDescription = "SnowWhite Logo",
+                    contentDescription = "SnoWhite Logo",
                     tint = DeepBlue,
                     modifier = Modifier.size(52.dp)
                 )
@@ -123,7 +116,7 @@ fun SplashScreen(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "SnowWhite",
+                    text = "SnoWhite",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White
@@ -152,7 +145,8 @@ fun SplashScreen(
 fun LoginScreen(
     isLoading: Boolean,
     onLoginClick: (phone: String, pass: String) -> Unit,
-    onNavigateToSignUp: () -> Unit
+    onNavigateToSignUp: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -209,61 +203,56 @@ fun LoginScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Header Hero Banner with Official Logo via AsyncImage
+                // TOP HALF: Solid Bright Blue Background (35% height)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(220.dp)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(DeepBlue, GradientAccentBlue)
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
+                        .height(250.dp)
+                        .background(BrightBlue)
                 ) {
+                    // Back Navigation Button in top-left
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .align(Alignment.TopStart)
+                            .testTag("login_back_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to Home",
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    // Vertically & Horizontally Centered Content
                     Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .height(64.dp)
-                                .padding(horizontal = 16.dp),
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            val context = LocalContext.current
-                            SubcomposeAsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data("https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png")
-                                    .allowHardware(false)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "SnoWhite Logo",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .height(52.dp)
-                                    .testTag("official_snowhite_logo_image"),
-                                loading = {
-                                    Icon(
-                                        imageVector = Icons.Default.AcUnit,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                },
-                                error = {
-                                    Icon(
-                                        imageVector = Icons.Default.AcUnit,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                }
+                            Icon(
+                                imageVector = Icons.Default.AcUnit,
+                                contentDescription = "SnoWhite Snowflake Logo",
+                                tint = Color.White,
+                                modifier = Modifier.size(38.dp)
                             )
                         }
 
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         Text(
-                            text = "SnowWhite Dry Cleaners",
+                            text = "SnoWhite Dry Cleaners",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
@@ -276,18 +265,18 @@ fun LoginScreen(
                     }
                 }
 
-                // Login Card Form
+                // BOTTOM HALF: White Card overlapping the form
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
                         .padding(top = 16.dp, bottom = 32.dp),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(22.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
@@ -314,13 +303,13 @@ fun LoginScreen(
                                 isError = phoneError != null,
                                 placeholder = { Text("e.g. +923011234567") },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Phone, contentDescription = null, tint = DeepBlue)
+                                    Icon(Icons.Default.Phone, contentDescription = null, tint = BrightBlue)
                                 },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = DeepBlue,
+                                    focusedBorderColor = BrightBlue,
                                     unfocusedBorderColor = LightBlueBorder,
                                     focusedContainerColor = Color.White,
                                     unfocusedContainerColor = Color.White
@@ -356,7 +345,7 @@ fun LoginScreen(
                                 isError = passwordError != null,
                                 placeholder = { Text("Enter your password") },
                                 leadingIcon = {
-                                    Icon(Icons.Default.Lock, contentDescription = null, tint = DeepBlue)
+                                    Icon(Icons.Default.Lock, contentDescription = null, tint = BrightBlue)
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
@@ -373,7 +362,7 @@ fun LoginScreen(
                                 keyboardActions = KeyboardActions(onDone = { validateAndSubmit() }),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = DeepBlue,
+                                    focusedBorderColor = BrightBlue,
                                     unfocusedBorderColor = LightBlueBorder,
                                     focusedContainerColor = Color.White,
                                     unfocusedContainerColor = Color.White
@@ -394,13 +383,13 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Primary Login Button (calls routes.php?action=login)
+                        // Primary Login Button using Bright Blue
                         Button(
                             onClick = { validateAndSubmit() },
                             enabled = !isLoading,
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = DeepBlue,
+                                containerColor = BrightBlue,
                                 contentColor = Color.White
                             ),
                             modifier = Modifier
@@ -507,7 +496,7 @@ fun LoginScreen(
                                 text = "Create Account",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = DeepBlue,
+                                color = BrightBlue,
                                 modifier = Modifier
                                     .clickable { onNavigateToSignUp() }
                                     .testTag("login_to_signup_button")
@@ -524,7 +513,8 @@ fun LoginScreen(
 fun SignUpScreen(
     isLoading: Boolean,
     onSignUpClick: (name: String, phone: String, pass: String) -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -588,38 +578,54 @@ fun SignUpScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header Hero Banner
+            // TOP HALF: Solid Bright Blue Background
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(DeepBlue, GradientAccentBlue)
-                        )
-                    ),
-                contentAlignment = Alignment.Center
+                    .height(230.dp)
+                    .background(BrightBlue)
             ) {
+                // Back Navigation Button
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .align(Alignment.TopStart)
+                        .testTag("signup_back_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to Home",
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                // Centered Content
                 Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(56.dp)
                             .clip(CircleShape)
-                            .background(Color.White),
+                            .background(Color.White.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.AcUnit,
-                            contentDescription = null,
-                            tint = DeepBlue,
-                            modifier = Modifier.size(30.dp)
+                            contentDescription = "SnoWhite Logo",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Join SnowWhite",
+                        text = "SnoWhite Dry Cleaners",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
@@ -632,13 +638,13 @@ fun SignUpScreen(
                 }
             }
 
-            // Sign Up Card Form
+            // BOTTOM HALF: Sign Up Card Form
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
                     .padding(top = 16.dp, bottom = 32.dp),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
@@ -670,13 +676,13 @@ fun SignUpScreen(
                             isError = nameError != null,
                             placeholder = { Text("e.g. Akhtar Hussain") },
                             leadingIcon = {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = DeepBlue)
+                                Icon(Icons.Default.Person, contentDescription = null, tint = BrightBlue)
                             },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                             shape = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = DeepBlue,
+                                focusedBorderColor = BrightBlue,
                                 unfocusedBorderColor = LightBlueBorder,
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White
@@ -712,13 +718,13 @@ fun SignUpScreen(
                             isError = phoneError != null,
                             placeholder = { Text("e.g. +923011234567") },
                             leadingIcon = {
-                                Icon(Icons.Default.Phone, contentDescription = null, tint = DeepBlue)
+                                Icon(Icons.Default.Phone, contentDescription = null, tint = BrightBlue)
                             },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
                             shape = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = DeepBlue,
+                                focusedBorderColor = BrightBlue,
                                 unfocusedBorderColor = LightBlueBorder,
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White
@@ -754,7 +760,7 @@ fun SignUpScreen(
                             isError = passwordError != null,
                             placeholder = { Text("Create a secure password") },
                             leadingIcon = {
-                                Icon(Icons.Default.Lock, contentDescription = null, tint = DeepBlue)
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = BrightBlue)
                             },
                             trailingIcon = {
                                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
@@ -771,7 +777,7 @@ fun SignUpScreen(
                             keyboardActions = KeyboardActions(onDone = { validateAndSubmit() }),
                             shape = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = DeepBlue,
+                                focusedBorderColor = BrightBlue,
                                 unfocusedBorderColor = LightBlueBorder,
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White
@@ -792,13 +798,13 @@ fun SignUpScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Register Submit Button
+                    // Register Submit Button using Bright Blue
                     Button(
                         onClick = { validateAndSubmit() },
                         enabled = !isLoading,
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DeepBlue,
+                            containerColor = BrightBlue,
                             contentColor = Color.White
                         ),
                         modifier = Modifier
@@ -848,7 +854,7 @@ fun SignUpScreen(
                             text = "Log In",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = DeepBlue,
+                            color = BrightBlue,
                             modifier = Modifier
                                 .clickable { onNavigateToLogin() }
                                 .testTag("signup_to_login_button")
@@ -864,11 +870,13 @@ fun SignUpScreen(
 fun RegisterScreen(
     isLoading: Boolean,
     onRegisterClick: (name: String, phone: String, pass: String) -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     SignUpScreen(
         isLoading = isLoading,
         onSignUpClick = onRegisterClick,
-        onNavigateToLogin = onNavigateToLogin
+        onNavigateToLogin = onNavigateToLogin,
+        onBackClick = onBackClick
     )
 }

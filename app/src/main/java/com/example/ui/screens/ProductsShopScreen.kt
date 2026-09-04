@@ -48,6 +48,9 @@ import com.example.ui.theme.LightBlueBorder
 import com.example.ui.theme.SoftLightBlue
 import com.example.ui.theme.StarYellow
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
+
 @Composable
 fun ProductsShopScreen(
     getProductQuantity: (String) -> Int,
@@ -55,7 +58,8 @@ fun ProductsShopScreen(
     onRemoveProduct: (CareProduct) -> Unit,
     totalCartCount: Int,
     totalCartPricePKR: Int,
-    onViewCartClick: () -> Unit
+    onViewCartClick: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -64,23 +68,36 @@ fun ProductsShopScreen(
             .testTag("products_shop_screen")
     ) {
         // Page Header
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = "Premium Care Products",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "Official SnowWhite detergents, fabric softeners & garment preservation kits",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.testTag("products_back_button")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "Premium Care Products",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Official SnoWhite detergents, fabric softeners & garment preservation kits",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // Catalog List

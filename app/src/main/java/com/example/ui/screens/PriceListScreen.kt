@@ -407,7 +407,7 @@ private fun FabricCareGuideSection() {
                 Icon(Icons.Default.Security, contentDescription = null, tint = DeepBlue, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "SnowWhite Garment Care Policy",
+                    text = "SnoWhite Garment Care Policy",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     color = DeepBlue

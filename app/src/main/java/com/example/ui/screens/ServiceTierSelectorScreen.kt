@@ -50,11 +50,15 @@ import com.example.ui.theme.GradientAccentBlue
 import com.example.ui.theme.LightBlueBorder
 import com.example.ui.theme.SoftLightBlue
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
+
 @Composable
 fun ServiceTierSelectorScreen(
     selectedTier: ServiceTierType,
     onTierSelected: (ServiceTierType) -> Unit,
-    onContinueClick: () -> Unit
+    onContinueClick: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -65,19 +69,34 @@ fun ServiceTierSelectorScreen(
             .testTag("service_tier_selector_screen"),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Page Title & Subtitle
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = "Select Service Tier",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "Choose how quickly you need your garments laundered & delivered",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // Page Title & Subtitle with Back Button
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.testTag("service_tier_back_button")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "Select Service Tier",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Choose your preferred turnaround time & handling",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // Tiers Cards

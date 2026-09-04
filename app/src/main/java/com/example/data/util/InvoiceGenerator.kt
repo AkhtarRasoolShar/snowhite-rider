@@ -44,7 +44,7 @@ object InvoiceGenerator {
             textPaint.textSize = 10f
             textPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             canvas.drawText("Premium Eco-Friendly Dry Cleaning & Steaming Care", 30f, 60f, textPaint)
-            canvas.drawText("NTN: 2847291-3 • DHA Phase 6, Karachi • Helpdesk: +92 300 0000000", 30f, 78f, textPaint)
+            canvas.drawText("NTN: 2847291-3 • DHA Phase 6, Karachi • Helpdesk / WhatsApp: +92 301 8637011", 30f, 78f, textPaint)
 
             // Invoice Title Badge Right
             textPaint.color = Color.parseColor("#22C55E") // Success Green

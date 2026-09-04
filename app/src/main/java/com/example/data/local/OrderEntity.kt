@@ -1,11 +1,7 @@
 package com.example.data.local
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-
-@Entity(tableName = "laundry_orders")
 data class OrderEntity(
-    @PrimaryKey val orderId: String,
+    val orderId: String,
     val trackingCode: String,
     val serviceTier: String,
     val area: String,

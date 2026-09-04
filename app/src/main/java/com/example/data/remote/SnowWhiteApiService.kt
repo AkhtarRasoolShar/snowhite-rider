@@ -40,7 +40,8 @@ interface SnowWhiteApiService {
     @GET("routes.php")
     suspend fun getCustomerOrders(
         @Query("action") action: String = "get_customer_orders",
-        @Query("customer_id") customerId: Int = 1
+        @Query("customer_id") customerId: Int = 1,
+        @Query("user_id") userId: Int = customerId
     ): Response<GetOrdersResponse>
 
     @POST("routes.php")
@@ -58,10 +59,8 @@ interface SnowWhiteApiService {
     suspend fun getCategories(): Response<ApiResponse<List<Category>>>
 
     @GET("routes.php?action=get_products&is_app=true")
-    suspend fun getActiveProducts(): Response<ApiResponse<List<Product>>>
+    suspend fun getProducts(): Response<ApiResponse<List<Product>>>
 
-    @GET("routes.php")
-    suspend fun getProducts(
-        @Query("action") action: String = "get_products"
-    ): Response<ApiResponse<List<Product>>>
+    @GET("routes.php?action=get_products&is_app=true")
+    suspend fun getActiveProducts(): Response<ApiResponse<List<Product>>>
 }

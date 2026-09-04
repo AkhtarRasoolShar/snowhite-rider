@@ -176,7 +176,7 @@ fun InvoiceDialog(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "SnowWhite Dry Cleaners (Pvt) Ltd.",
+                                text = "SnoWhite Dry Cleaners (Pvt) Ltd.",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = DeepBlue
@@ -192,7 +192,7 @@ fun InvoiceDialog(
                                 color = Color(0xFF64748B)
                             )
                             Text(
-                                text = "Helpdesk: +92 300 0000000",
+                                text = "Helpdesk (WhatsApp): +92 301 8637011",
                                 fontSize = 9.sp,
                                 color = Color(0xFF64748B)
                             )
@@ -421,7 +421,7 @@ fun InvoiceDialog(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Thank you for choosing SnowWhite Dry Cleaners!",
+                            text = "Thank you for choosing SnoWhite Dry Cleaners!",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = DeepBlue
@@ -509,7 +509,7 @@ private fun shareInvoiceSummary(context: Context, invoice: InvoiceData) {
         }
 
         val shareText = """
-            🧾 SNOWWHITE DRY CLEANERS - OFFICIAL INVOICE
+            🧾 SNOWITE DRY CLEANERS - OFFICIAL INVOICE
             -------------------------------------------
             Invoice #: ${invoice.invoiceNumber}
             Order #: #${invoice.orderId}
@@ -530,8 +530,8 @@ private fun shareInvoiceSummary(context: Context, invoice: InvoiceData) {
             TOTAL PAYABLE: Rs. ${invoice.grandTotalPKR} PKR
             Status: ${invoice.paymentStatus}
             -------------------------------------------
-            SnowWhite Dry Cleaners (Pvt) Ltd.
-            Helpdesk: +92 300 0000000 | Karachi, Pakistan
+            SnoWhite Dry Cleaners (Pvt) Ltd.
+            Helpdesk (WhatsApp): +92 301 8637011 | Karachi, Pakistan
         """.trimIndent()
 
         val sendIntent = Intent().apply {
@@ -539,7 +539,7 @@ private fun shareInvoiceSummary(context: Context, invoice: InvoiceData) {
             putExtra(Intent.EXTRA_TEXT, shareText)
             type = "text/plain"
         }
-        val shareIntent = Intent.createChooser(sendIntent, "Share SnowWhite Invoice")
+        val shareIntent = Intent.createChooser(sendIntent, "Share SnoWhite Invoice")
         context.startActivity(shareIntent)
     } catch (_: Exception) {
         Toast.makeText(context, "Could not open share options", Toast.LENGTH_SHORT).show()

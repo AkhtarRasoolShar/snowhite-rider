@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.LocalLaundryService
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.TrackChanges
@@ -65,6 +66,7 @@ fun DrawerMenuContent(
     onNavigateHistory: () -> Unit,
     onNavigatePriceList: () -> Unit = {},
     onNavigateProfile: () -> Unit = {},
+    onNavigateNotificationSettings: () -> Unit = {},
     onNavigateSupportWhatsApp: () -> Unit = {},
     onLoginClick: () -> Unit = {},
     onLogout: () -> Unit = {},
@@ -241,8 +243,18 @@ fun DrawerMenuContent(
                 )
 
                 DrawerMenuItem(
+                    icon = Icons.Default.NotificationsActive,
+                    label = "Push Notification Settings",
+                    isSelected = currentRoute == "notifications",
+                    onClick = {
+                        onNavigateNotificationSettings()
+                        onCloseDrawer()
+                    }
+                )
+
+                DrawerMenuItem(
                     icon = Icons.Default.Call,
-                    label = "Customer Support (WhatsApp)",
+                    label = "WhatsApp Support (+92 301 8637011)",
                     isSelected = false,
                     onClick = {
                         onNavigateSupportWhatsApp()
@@ -285,7 +297,7 @@ fun DrawerMenuContent(
                     .padding(horizontal = 16.dp)
             ) {
                 Text(
-                    text = "SnowWhite Customer App v2.4 • Karachi",
+                    text = "Snowhite DRYCLEANERS v7.0 • Karachi",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

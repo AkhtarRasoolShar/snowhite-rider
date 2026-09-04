@@ -33,7 +33,7 @@ object CatalogData {
     )
 
     val careProducts = listOf(
-        CareProduct("p1", "SnowWhite Ultra Liquid Detergent", 850, "Detergents", "Pro-enzyme stain remover, safe for darks & colors.", 4.9, "1.5 Litres"),
+        CareProduct("p1", "SnoWhite Ultra Liquid Detergent", 850, "Detergents", "Pro-enzyme stain remover, safe for darks & colors.", 4.9, "1.5 Litres"),
         CareProduct("p2", "Wool & Silk Delicate Wash", 750, "Detergents", "pH-neutral cashmere, silk, and pashmina shampoo.", 4.8, "500 ml"),
         CareProduct("p3", "Stain Eraser Instant Pen", 450, "Care Kits", "Removes tea, coffee, oil, and sauce spots instantly on the go.", 5.0, "Pocket Size"),
         CareProduct("p4", "Pure Lavender Eco Softener", 650, "Detergents", "Static-free plush softening with organic lavender oils.", 4.9, "1 Litre"),
@@ -43,7 +43,7 @@ object CatalogData {
     )
 
     val customerReviews = listOf(
-        CustomerReview("r1", "Syed Bilal Raza", "Clifton, Karachi", 5, "SnowWhite is hands down the best dry cleaners in Karachi! Same-day express pickup for my suits was flawless.", "2 days ago"),
+        CustomerReview("r1", "Syed Bilal Raza", "Clifton, Karachi", 5, "SnoWhite is hands down the best dry cleaners in Karachi! Same-day express pickup for my suits was flawless.", "2 days ago"),
         CustomerReview("r2", "Dr. Ayesha Siddiqui", "DHA Phase 6, Karachi", 5, "My designer Abayas and silk lawn suits always come back looking brand new and smelling amazing!", "1 week ago"),
         CustomerReview("r3", "Mohammad Usman", "PECHS, Karachi", 5, "Doorstep delivery is super punctual. Live tracking showed exact driver location and status updates.", "3 days ago"),
         CustomerReview("r4", "Fatima Zahra", "Gulshan-e-Iqbal, Karachi", 5, "The detergent products and stain eraser pen are absolute lifesavers. 5 stars all the way!", "5 days ago")

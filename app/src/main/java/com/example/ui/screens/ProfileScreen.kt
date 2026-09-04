@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Save
@@ -76,6 +78,8 @@ fun ProfileScreen(
     savedAddress: String,
     onSaveAddress: (String) -> Unit,
     onOpenMapPicker: () -> Unit,
+    onOpenNotificationSettings: () -> Unit = {},
+    onWhatsAppSupportClick: () -> Unit = {},
     onLogoutClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
@@ -101,6 +105,18 @@ fun ProfileScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = onWhatsAppSupportClick,
+                        modifier = Modifier.testTag("profile_topappbar_support_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = "WhatsApp Support (+92 301 8637011)",
+                            tint = Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DeepBlue)
@@ -183,7 +199,7 @@ fun ProfileScreen(
                                     Icon(Icons.Default.Shield, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "SnowWhite VIP Member • Karachi",
+                                        text = "SnoWhite VIP Member • Karachi",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
@@ -305,6 +321,48 @@ fun ProfileScreen(
                 }
             }
 
+            // WhatsApp Customer Support
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "WhatsApp Customer Support",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color(0xFF0F172A)
+                        )
+                        Text(
+                            text = "+92 301 8637011 • Direct Chat & Queries",
+                            fontSize = 12.sp,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+
+                    Button(
+                        onClick = onWhatsAppSupportClick,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.testTag("profile_whatsapp_support_button")
+                    ) {
+                        Text("Chat Now", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
             // Account Actions
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -325,6 +383,35 @@ fun ProfileScreen(
                         color = Color(0xFF0F172A)
                     )
 
+                    Button(
+                        onClick = onOpenNotificationSettings,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SoftLightBlue, contentColor = DeepBlue),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("profile_open_notifications_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    tint = DeepBlue,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Notification Settings & FCM Push Alerts", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            Text("➔", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+
                     OutlinedButton(
                         onClick = onLogoutClick,
                         shape = RoundedCornerShape(12.dp),
@@ -338,9 +425,18 @@ fun ProfileScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = Color.Red, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Log Out from SnowWhite", fontWeight = FontWeight.Bold)
+                            Text("Log Out from SnoWhite", fontWeight = FontWeight.Bold)
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "SnoWhite Dry Cleaners v10.0 • Since 1949",
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
                 }
             }
         }

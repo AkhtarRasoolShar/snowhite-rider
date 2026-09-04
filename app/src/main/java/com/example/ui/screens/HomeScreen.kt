@@ -25,7 +25,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.ChevronRight
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.filled.DryCleaning
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Shield
@@ -55,6 +58,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.example.data.local.OrderEntity
 import com.example.data.model.Category
 import com.example.data.model.Product
@@ -66,12 +71,15 @@ import com.example.ui.theme.GradientAccentBlue
 import com.example.ui.theme.OffWhiteBg
 import com.example.ui.theme.SoftLightBlue
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     activeOrder: OrderEntity?,
     categories: List<Category>,
     products: List<Product>,
     selectedCategoryId: Int?,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     onCategorySelected: (Int) -> Unit,
     getProductQuantity: (Int?) -> Int,
     onAddProduct: (Product) -> Unit,
@@ -95,13 +103,18 @@ fun HomeScreen(
             .background(OffWhiteBg)
             .testTag("home_screen")
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = if (totalCartCount > 0) 80.dp else 16.dp),
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize()
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = if (totalCartCount > 0) 80.dp else 16.dp),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
             // Active Order Banner if an order is currently in progress
             if (activeOrder != null) {
                 item {
@@ -369,6 +382,7 @@ fun HomeScreen(
                 }
             }
         }
+    }
 
         // Sticky Bottom "View Cart / Schedule Pickup" Bar
         if (totalCartCount > 0) {
@@ -453,6 +467,33 @@ private fun ProductCardItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Product Image or Fallback Icon Box
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SoftLightBlue),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!product.image_url.isNullOrBlank()) {
+                    AsyncImage(
+                        model = product.image_url,
+                        contentDescription = product.name ?: "Product Image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Checkroom,
+                        contentDescription = "Product Icon",
+                        tint = Color(0xFF00B4D8),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)

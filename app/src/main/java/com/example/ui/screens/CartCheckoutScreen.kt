@@ -53,6 +53,7 @@ import com.example.ui.theme.GradientAccentBlue
 import com.example.ui.theme.LightBlueBorder
 import com.example.ui.theme.SoftLightBlue
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.OutlinedButton
 
@@ -67,7 +68,8 @@ fun CartCheckoutScreen(
     onRemoveProduct: (com.example.data.model.CareProduct) -> Unit,
     onProceedToSchedule: () -> Unit,
     onContinueShopping: () -> Unit,
-    onViewPreOrderInvoice: (() -> Unit)? = null
+    onViewPreOrderInvoice: (() -> Unit)? = null,
+    onBackClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -82,18 +84,33 @@ fun CartCheckoutScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "My Laundry Cart",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "$totalBadgeCount items selected",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.testTag("cart_back_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to Home",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                Column {
+                    Text(
+                        text = "My Laundry Cart",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "$totalBadgeCount items selected",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Box(

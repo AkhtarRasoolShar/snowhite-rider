@@ -63,6 +63,9 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.ui.components.GoogleMapAddressPickerModal
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PickupSchedulingScreen(
@@ -71,7 +74,8 @@ fun PickupSchedulingScreen(
     totalCartCount: Int,
     totalPricePKR: Int,
     isSubmitting: Boolean,
-    onConfirmOrderClick: () -> Unit
+    onConfirmOrderClick: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     var isAreaDropdownExpanded by remember { mutableStateOf(false) }
     var isMapPickerVisible by remember { mutableStateOf(false) }
@@ -99,19 +103,34 @@ fun PickupSchedulingScreen(
             .testTag("pickup_scheduling_screen"),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = "Schedule Pickup & Address",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "SnowWhite rider will collect your garments from your doorstep in Karachi",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // Header with Back Button
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.testTag("checkout_back_button")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "Schedule Pickup & Address",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "SnoWhite rider will collect your garments from your doorstep in Karachi",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // Section 1: Address & Karachi Area Picker

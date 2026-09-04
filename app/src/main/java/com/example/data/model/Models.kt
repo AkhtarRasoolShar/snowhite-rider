@@ -35,7 +35,8 @@ data class Product(
     @SerializedName("category_id") val category_id: Int? = null,
     @SerializedName("name") val name: String? = null,
     @SerializedName("description") val description: String? = null,
-    @SerializedName("price") val rawPrice: Any? = null
+    @SerializedName("price") val rawPrice: Any? = null,
+    @SerializedName("image_url") val image_url: String? = null
 ) {
     val price: Double
         get() {
@@ -85,12 +86,11 @@ data class PickupSchedule(
 )
 
 enum class OrderStatus(val stepIndex: Int, val title: String, val subtitle: String) {
-    PLACED(0, "Order Placed", "Your order has been logged into SnowWhite system"),
-    PICKUP_ASSIGNED(1, "Driver Assigned", "SnowWhite rider is on the way to collect garments"),
-    IN_CLEANING(2, "In Cleaning & Pressing", "Garments are undergoing expert eco-cleaning"),
-    QUALITY_CHECK(3, "Quality Inspection", "Final stain check, steaming, and garment bagging"),
-    OUT_FOR_DELIVERY(4, "Out for Delivery", "Rider is delivering crisp fresh clothes to your doorstep"),
-    DELIVERED(5, "Delivered", "Order successfully fulfilled. Thank you for choosing SnowWhite!")
+    COLLECTING(0, "Collecting", "Rider is scheduled for collecting garments"),
+    RECEIVED_AT_HUB(1, "Received at Hub", "Garments received and logged at cleaning hub"),
+    IN_WASHING(2, "In Washing", "Garments undergoing expert eco-cleaning & pressing"),
+    OUT_FOR_DELIVERY(3, "Out for Delivery", "Rider is delivering crisp fresh clothes to your doorstep"),
+    DELIVERED(4, "Delivered", "Order successfully fulfilled. Thank you for choosing SnoWhite!")
 }
 
 data class OrderItemRequest(
@@ -166,13 +166,27 @@ data class RemoteOrder(
 
     val displayRiderPhone: String?
         get() = rider_phone ?: riderPhoneAlt
+
+    val statusStepIndex: Int
+        get() {
+            val clean = (status ?: "COLLECTING").uppercase().replace(" ", "_").trim()
+            return when {
+                clean.contains("DELIVERED") || clean == "4" || clean.contains("COMPLETED") -> 4
+                clean.contains("OUT_FOR_DELIVERY") || clean == "3" || clean.contains("DISPATCHED") -> 3
+                clean.contains("IN_WASHING") || clean == "2" || clean.contains("WASHING") || clean.contains("CLEANING") -> 2
+                clean.contains("RECEIVED_AT_HUB") || clean == "1" || clean.contains("RECEIVED") || clean.contains("HUB") -> 1
+                else -> 0
+            }
+        }
 }
 
 typealias CustomerOrder = RemoteOrder
 
 data class GetOrdersResponse(
     @SerializedName("success") val success: Boolean? = true,
-    @SerializedName("orders") val orders: List<RemoteOrder>? = null
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("orders") val orders: List<RemoteOrder>? = null,
+    @SerializedName("data") val data: List<RemoteOrder>? = null
 )
 
 data class CustomerReview(
@@ -200,14 +214,49 @@ data class AuthResponse(
     @SerializedName("status") val status: String? = null,
     @SerializedName("success") val success: Boolean? = true,
     @SerializedName("message") val message: String? = null,
-    @SerializedName("customer_id") val customer_id: Int? = null,
-    @SerializedName("id") val id: Int? = null,
+    @SerializedName("customer_id") val customer_id: Any? = null,
+    @SerializedName("user_id") val user_id: Any? = null,
+    @SerializedName("userId") val userIdAlt: Any? = null,
+    @SerializedName("id") val id: Any? = null,
+    @SerializedName("user") val user: Map<String, Any?>? = null,
+    @SerializedName("data") val data: Map<String, Any?>? = null,
+    @SerializedName("customer") val customer: Map<String, Any?>? = null,
     @SerializedName("name") val name: String? = null,
     @SerializedName("phone") val phone: String? = null,
     @SerializedName("customer_name") val customer_name: String? = null,
     @SerializedName("customer_phone") val customer_phone: String? = null,
     @SerializedName("error") val error: String? = null
-)
+) {
+    fun extractUserId(): Int? {
+        fun parseId(value: Any?): Int? {
+            return when (value) {
+                is Number -> value.toInt()
+                is String -> value.toDoubleOrNull()?.toInt() ?: value.toIntOrNull()
+                else -> null
+            }
+        }
+
+        return parseId(user_id)
+            ?: parseId(customer_id)
+            ?: parseId(userIdAlt)
+            ?: parseId(id)
+            ?: parseId(user?.get("id") ?: user?.get("user_id") ?: user?.get("customer_id"))
+            ?: parseId(data?.get("id") ?: data?.get("user_id") ?: data?.get("customer_id"))
+            ?: parseId(customer?.get("id") ?: customer?.get("customer_id"))
+    }
+
+    fun extractUserName(): String? {
+        val raw = name ?: customer_name
+            ?: (user?.get("name") ?: user?.get("customer_name") ?: data?.get("name") ?: customer?.get("name")) as? String
+        return raw?.takeIf { it.isNotBlank() }
+    }
+
+    fun extractUserPhone(): String? {
+        val raw = phone ?: customer_phone
+            ?: (user?.get("phone") ?: user?.get("customer_phone") ?: data?.get("phone") ?: customer?.get("phone")) as? String
+        return raw?.takeIf { it.isNotBlank() }
+    }
+}
 
 data class EmailInvoiceRequest(
     @SerializedName("order_id") val order_id: String? = null,

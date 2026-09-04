@@ -71,7 +71,7 @@ fun HeroPromoBanner(
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Pill Tag: OFFICIAL DRY CLEANERS
+                // Pill Tag: SNOWHITE DRYCLEANERS • SINCE 1949
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
@@ -79,27 +79,27 @@ fun HeroPromoBanner(
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = "OFFICIAL DRY CLEANERS",
+                        text = "SNOWHITE DRYCLEANERS • SINCE 1949",
                         color = Color.White,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
+                        letterSpacing = 1.1.sp
                     )
                 }
 
-                // Bold Headline: Professional Laundry & Dry Cleaning
+                // Bold Headline: Largest Cleaning Network... COUNTRYWIDE!
                 Text(
-                    text = "Professional Laundry &\nDry Cleaning",
+                    text = "Largest Cleaning Network...\nCOUNTRYWIDE!",
                     color = Color.White,
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     lineHeight = 25.sp
                 )
 
                 // Subtitle: Doorstep Pickup & Delivery • Book in Seconds
                 Text(
-                    text = "Doorstep Pickup & Delivery • Book in Seconds",
-                    color = Color.White.copy(alpha = 0.85f),
+                    text = "Professional Dry Cleaning, Pressing & Laundry at your Doorstep",
+                    color = Color.White.copy(alpha = 0.9f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Normal
                 )

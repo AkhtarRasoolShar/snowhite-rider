@@ -1,10 +1,14 @@
 package com.example.ui.screens
 
+import com.example.openSupportWhatsApp
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ListAlt
@@ -62,14 +66,7 @@ fun MainContainer(
     val context = LocalContext.current
 
     val launchWhatsAppSupport = {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/923001234567"))
-            context.startActivity(intent)
-        } catch (_: Exception) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Unable to open WhatsApp. Please contact +92 300 1234567")
-            }
-        }
+        openSupportWhatsApp(context)
     }
 
     LaunchedEffect(uiState.currentScreen) {
@@ -141,7 +138,8 @@ fun MainContainer(
                 LoginScreen(
                     isLoading = uiState.isAuthLoading,
                     onLoginClick = { phone, pass -> viewModel.loginUser(phone, pass) },
-                    onNavigateToSignUp = { viewModel.navigateTo(Screen.SignUp) }
+                    onNavigateToSignUp = { viewModel.navigateTo(Screen.SignUp) },
+                    onBackClick = { viewModel.navigateTo(Screen.Home) }
                 )
                 SnackbarHost(
                     hostState = snackbarHostState,
@@ -155,7 +153,8 @@ fun MainContainer(
                 SignUpScreen(
                     isLoading = uiState.isAuthLoading,
                     onSignUpClick = { name, phone, pass -> viewModel.registerUser(name, phone, pass) },
-                    onNavigateToLogin = { viewModel.navigateTo(Screen.Login) }
+                    onNavigateToLogin = { viewModel.navigateTo(Screen.Login) },
+                    onBackClick = { viewModel.navigateTo(Screen.Home) }
                 )
                 SnackbarHost(
                     hostState = snackbarHostState,
@@ -177,6 +176,7 @@ fun MainContainer(
                             Screen.OrderHistory -> "history"
                             Screen.PriceList -> "pricelist"
                             Screen.Profile -> "profile"
+                            Screen.NotificationSettings -> "notifications"
                             else -> "home"
                         },
                         isLoggedIn = uiState.isLoggedIn,
@@ -192,6 +192,7 @@ fun MainContainer(
                         onNavigateHistory = { viewModel.navigateTo(Screen.OrderHistory) },
                         onNavigatePriceList = { viewModel.navigateTo(Screen.PriceList) },
                         onNavigateProfile = { viewModel.navigateTo(Screen.Profile) },
+                        onNavigateNotificationSettings = { viewModel.navigateTo(Screen.NotificationSettings) },
                         onNavigateSupportWhatsApp = { launchWhatsAppSupport() },
                         onLoginClick = { viewModel.navigateTo(Screen.Login) },
                         onLogout = { viewModel.logoutUser() },
@@ -202,6 +203,8 @@ fun MainContainer(
                 }
             ) {
                 Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    contentWindowInsets = WindowInsets.systemBars,
                     containerColor = Color(0xFFF7F9FC),
                     topBar = {
                         TopAppBarHeader(
@@ -212,7 +215,7 @@ fun MainContainer(
                                 viewModel.navigateTo(Screen.CartCheckout)
                             },
                             onOpenNotifications = {
-                                viewModel.navigateTo(Screen.OrderHistory)
+                                viewModel.navigateTo(Screen.NotificationSettings)
                             },
                             onOpenProfile = {
                                 viewModel.navigateTo(Screen.Profile)
@@ -311,6 +314,8 @@ fun MainContainer(
                                 categories = uiState.categories,
                                 products = uiState.products,
                                 selectedCategoryId = uiState.selectedCategoryId,
+                                isRefreshing = uiState.isLoadingCategoriesAndProducts || uiState.isFetchingOrders,
+                                onRefresh = { viewModel.refreshCatalogAndOrders() },
                                 onCategorySelected = { viewModel.selectCategoryTab(it) },
                                 getProductQuantity = { viewModel.getProductQuantity(it) },
                                 onAddProduct = { viewModel.addProductToCart(it) },
@@ -331,7 +336,8 @@ fun MainContainer(
                             Screen.ServiceTierSelect -> ServiceTierSelectorScreen(
                                 selectedTier = uiState.selectedServiceTier,
                                 onTierSelected = { viewModel.selectServiceTier(it) },
-                                onContinueClick = { viewModel.navigateTo(Screen.ItemSelection) }
+                                onContinueClick = { viewModel.navigateTo(Screen.ItemSelection) },
+                                onBackClick = { viewModel.navigateTo(Screen.Home) }
                             )
 
                             Screen.ItemSelection -> ItemSelectionScreen(
@@ -345,7 +351,8 @@ fun MainContainer(
                                 onRemoveGarment = { viewModel.removeGarmentFromCart(it) },
                                 totalCartCount = viewModel.totalCartBadgeCount,
                                 totalCartPricePKR = viewModel.totalCartPricePKR,
-                                onProceedToSchedule = { viewModel.proceedToCheckout() }
+                                onProceedToSchedule = { viewModel.proceedToCheckout() },
+                                onBackClick = { viewModel.navigateTo(Screen.ServiceTierSelect) }
                             )
 
                             Screen.PickupScheduling -> PickupSchedulingScreen(
@@ -356,11 +363,13 @@ fun MainContainer(
                                 totalCartCount = viewModel.totalCartBadgeCount,
                                 totalPricePKR = viewModel.totalCartPricePKR,
                                 isSubmitting = uiState.isSubmittingOrder,
-                                onConfirmOrderClick = { viewModel.createAndSubmitOrder() }
+                                onConfirmOrderClick = { viewModel.createAndSubmitOrder() },
+                                onBackClick = { viewModel.navigateTo(Screen.CartCheckout) }
                             )
 
                             is Screen.LiveOrderTracking -> LiveOrderTrackingScreen(
                                 order = uiState.currentActiveOrder,
+                                remoteOrder = uiState.remoteOrders.find { it.displayOrderId == currentScreen.orderId } ?: uiState.remoteOrders.firstOrNull(),
                                 onBackToHomeClick = { viewModel.navigateTo(Screen.Home) }
                             )
 
@@ -370,7 +379,8 @@ fun MainContainer(
                                 onRemoveProduct = { viewModel.removeProductFromCart(it) },
                                 totalCartCount = viewModel.totalCartBadgeCount,
                                 totalCartPricePKR = viewModel.totalCartPricePKR,
-                                onViewCartClick = { viewModel.navigateTo(Screen.CartCheckout) }
+                                onViewCartClick = { viewModel.navigateTo(Screen.CartCheckout) },
+                                onBackClick = { viewModel.navigateTo(Screen.Home) }
                             )
 
                             Screen.CartCheckout -> CartCheckoutScreen(
@@ -383,7 +393,8 @@ fun MainContainer(
                                 onRemoveProduct = { viewModel.removeProductFromCart(it) },
                                 onProceedToSchedule = { viewModel.proceedToCheckout() },
                                 onContinueShopping = { viewModel.navigateTo(Screen.ServiceTierSelect) },
-                                onViewPreOrderInvoice = { viewModel.navigateToInvoice(isPreOrderQuote = true) }
+                                onViewPreOrderInvoice = { viewModel.navigateToInvoice(isPreOrderQuote = true) },
+                                onBackClick = { viewModel.navigateTo(Screen.Home) }
                             )
 
                             Screen.OrderHistory -> OrderHistoryScreen(
@@ -391,6 +402,7 @@ fun MainContainer(
                                 localOrdersList = uiState.pastOrdersList,
                                 isFetchingOrders = uiState.isFetchingOrders,
                                 onRefreshOrders = { viewModel.fetchCustomerOrders() },
+                                onFetchOrders = { id -> viewModel.fetchOrders(id) },
                                 onSelectOrder = { orderId ->
                                     viewModel.navigateTo(Screen.LiveOrderTracking(orderId))
                                 },
@@ -400,7 +412,8 @@ fun MainContainer(
                                 },
                                 onReorder = { remote, local ->
                                     viewModel.reorderOrder(remote, local)
-                                }
+                                },
+                                onBackClick = { viewModel.navigateTo(Screen.Home) }
                             )
 
                             Screen.PriceList -> PriceListScreen(
@@ -417,8 +430,21 @@ fun MainContainer(
                                 savedAddress = uiState.userAddress,
                                 onSaveAddress = { viewModel.saveUserAddress(it) },
                                 onOpenMapPicker = { viewModel.navigateTo(Screen.MapPicker) },
+                                onOpenNotificationSettings = { viewModel.navigateTo(Screen.NotificationSettings) },
+                                onWhatsAppSupportClick = { launchWhatsAppSupport() },
                                 onLogoutClick = { viewModel.logoutUser() },
                                 onBackClick = { viewModel.navigateTo(Screen.Home) }
+                            )
+
+                            Screen.NotificationSettings -> NotificationSettingsScreen(
+                                isPickupRemindersEnabled = uiState.isNotifPickupRemindersEnabled,
+                                isStatusUpdatesEnabled = uiState.isNotifStatusUpdatesEnabled,
+                                isDeliveryAlertsEnabled = uiState.isNotifDeliveryAlertsEnabled,
+                                isPromosEnabled = uiState.isNotifPromosEnabled,
+                                isWhatsappSyncEnabled = uiState.isNotifWhatsappSyncEnabled,
+                                onToggleSetting = { type, enabled -> viewModel.updateNotificationSetting(type, enabled) },
+                                onSendTestPushClick = { viewModel.sendTestNotification() },
+                                onBackClick = { viewModel.navigateTo(Screen.Profile) }
                             )
 
                             Screen.MapPicker -> MapPickerScreen(

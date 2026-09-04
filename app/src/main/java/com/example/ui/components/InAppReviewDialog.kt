@@ -84,7 +84,7 @@ fun InAppReviewDialog(
 
                 // Title & Subtitle
                 Text(
-                    text = "Enjoying SnowWhite Dry Cleaners?",
+                    text = "Enjoying SnoWhite Dry Cleaners?",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1E293B),

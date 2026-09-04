@@ -1,11 +1,11 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.OrderEntity
 import com.example.data.local.SessionManager
-import com.example.data.local.SnowWhiteDatabase
 import com.example.data.model.CareProduct
 import com.example.data.model.CartItem
 import com.example.data.model.CreateOrderRequest
@@ -48,6 +48,7 @@ sealed class Screen {
     object PriceList : Screen()
     object Profile : Screen()
     object MapPicker : Screen()
+    object NotificationSettings : Screen()
 }
 
 data class UiState(
@@ -83,12 +84,15 @@ data class UiState(
     val snackbarMessage: String? = null,
     val activeInvoiceData: InvoiceData? = null,
     val showInAppReviewDialog: Boolean = false,
-    val pendingReviewPromptOnCheckout: Boolean = false
+    val pendingReviewPromptOnCheckout: Boolean = false,
+    val isNotifPickupRemindersEnabled: Boolean = true,
+    val isNotifStatusUpdatesEnabled: Boolean = true,
+    val isNotifDeliveryAlertsEnabled: Boolean = true,
+    val isNotifPromosEnabled: Boolean = true,
+    val isNotifWhatsappSyncEnabled: Boolean = true
 )
 
 class SnowWhiteViewModel(application: Application) : AndroidViewModel(application) {
-    private val database = SnowWhiteDatabase.getDatabase(application)
-    private val orderDao = database.orderDao()
     private val sessionManager = SessionManager(application)
 
     private val _uiState = MutableStateFlow(UiState())
@@ -107,6 +111,12 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             PickupSchedule()
         }
 
+        val notifPickup = sessionManager.isNotifPickupEnabled()
+        val notifStatus = sessionManager.isNotifStatusEnabled()
+        val notifDelivery = sessionManager.isNotifDeliveryEnabled()
+        val notifPromos = sessionManager.isNotifPromosEnabled()
+        val notifWhatsapp = sessionManager.isNotifWhatsappSyncEnabled()
+
         _uiState.update {
             it.copy(
                 isLoggedIn = loggedIn,
@@ -115,44 +125,24 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 userProfilePhone = userPhone ?: "+92 301 1234567",
                 userAddress = savedAddress,
                 pickupSchedule = initialSchedule,
-                currentScreen = Screen.Splash
+                currentScreen = Screen.Splash,
+                isNotifPickupRemindersEnabled = notifPickup,
+                isNotifStatusUpdatesEnabled = notifStatus,
+                isNotifDeliveryAlertsEnabled = notifDelivery,
+                isNotifPromosEnabled = notifPromos,
+                isNotifWhatsappSyncEnabled = notifWhatsapp
             )
         }
 
-        // Pre-populate initial default cart items to match requirement cart badge count (~13 items)
-        val initialItems = mutableListOf<CartItem>()
-        val shirt = CatalogData.garmentItems.firstOrNull { it.id == "m2" }
-        val suit = CatalogData.garmentItems.firstOrNull { it.id == "m1" }
-        val lawn = CatalogData.garmentItems.firstOrNull { it.id == "w1" }
-        val detergent = CatalogData.careProducts.firstOrNull { it.id == "p1" }
+        // Start with clean empty cart so users add what they actually want
+        _uiState.update { it.copy(cartItems = emptyList()) }
 
-        if (shirt != null) initialItems.add(CartItem(garmentItem = shirt, quantity = 5, serviceTier = ServiceTierType.REGULAR))
-        if (suit != null) initialItems.add(CartItem(garmentItem = suit, quantity = 2, serviceTier = ServiceTierType.REGULAR))
-        if (lawn != null) initialItems.add(CartItem(garmentItem = lawn, quantity = 5, serviceTier = ServiceTierType.REGULAR))
-        if (detergent != null) initialItems.add(CartItem(careProduct = detergent, quantity = 1))
-
-        _uiState.update { it.copy(cartItems = initialItems) }
-
-        // Fetch customer live orders, dynamic services & categories/products on startup
-        if (loggedIn) {
-            fetchCustomerOrders()
-        }
+        // Fetch customer live orders, dynamic services & categories/products on startup (COLD START FIX)
         fetchServices()
         fetchCategoriesAndProducts()
 
-        // Observe Room orders safely
-        viewModelScope.launch {
-            try {
-                orderDao.getAllOrders().collectLatest { orders ->
-                    _uiState.update { state ->
-                        val safeOrders = orders ?: emptyList()
-                        val active = if (state.currentActiveOrder != null) {
-                            safeOrders.find { it.orderId == state.currentActiveOrder.orderId } ?: safeOrders.firstOrNull()
-                        } else safeOrders.firstOrNull()
-                        state.copy(pastOrdersList = safeOrders, currentActiveOrder = active)
-                    }
-                }
-            } catch (_: Exception) {}
+        if (userId > 0) {
+            fetchOrdersForLoggedInUser(userId)
         }
     }
 
@@ -215,6 +205,12 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             }
             state.copy(cartItems = currentList)
         }
+    }
+
+    fun refreshCatalogAndOrders() {
+        fetchCategoriesAndProducts()
+        fetchServices()
+        fetchCustomerOrders()
     }
 
     fun fetchCategoriesAndProducts() {
@@ -449,7 +445,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.update {
             it.copy(
                 showInAppReviewDialog = false,
-                snackbarMessage = "Thank you for rating SnowWhite Dry Cleaners $rating stars!"
+                snackbarMessage = "Thank you for rating SnoWhite Dry Cleaners $rating stars!"
             )
         }
     }
@@ -513,11 +509,12 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                     val isError = body?.status == "error" || body?.success == false || !isExplicitSuccess
 
                     if (!isError && body != null) {
-                        val userId = body.customer_id ?: body.id ?: 101
-                        val userName = body.name ?: body.customer_name ?: "Akhtar Hussain"
-                        val userPhone = body.phone ?: body.customer_phone ?: cleanPhone
+                        val userId = body.extractUserId() ?: 101
+                        val userName = body.extractUserName() ?: "Akhtar Hussain"
+                        val userPhone = body.extractUserPhone() ?: cleanPhone
 
-                        sessionManager.saveUserSession(userId, userName, userPhone)
+                        Log.d("AUTH_DEBUG", "Login success! Parsed userId: $userId, name: $userName, phone: $userPhone")
+                        sessionManager.saveUser(userId, userName, userPhone)
 
                         val targetScreen = _uiState.value.postLoginTargetScreen ?: Screen.Home
 
@@ -534,7 +531,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                             )
                         }
 
-                        fetchCustomerOrders()
+                        fetchOrders(userId)
                     } else {
                         val errorMsg = body?.message ?: body?.error ?: "Invalid phone number or password."
                         _uiState.update {
@@ -588,11 +585,12 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                     val isError = body?.status == "error" || body?.success == false || !isExplicitSuccess
 
                     if (!isError && body != null) {
-                        val userId = body.customer_id ?: body.id ?: 102
-                        val userName = body.name ?: body.customer_name ?: cleanName
-                        val userPhone = body.phone ?: body.customer_phone ?: cleanPhone
+                        val userId = body.extractUserId() ?: 102
+                        val userName = body.extractUserName() ?: cleanName
+                        val userPhone = body.extractUserPhone() ?: cleanPhone
 
-                        sessionManager.saveUserSession(userId, userName, userPhone)
+                        Log.d("AUTH_DEBUG", "Register success! Parsed userId: $userId, name: $userName, phone: $userPhone")
+                        sessionManager.saveUser(userId, userName, userPhone)
 
                         val targetScreen = _uiState.value.postLoginTargetScreen ?: Screen.Home
 
@@ -605,11 +603,11 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                                 isAuthLoading = false,
                                 currentScreen = targetScreen,
                                 postLoginTargetScreen = null,
-                                snackbarMessage = body.message ?: "Registration successful! Welcome to SnowWhite."
+                                snackbarMessage = body.message ?: "Registration successful! Welcome to SnoWhite."
                             )
                         }
 
-                        fetchCustomerOrders()
+                        fetchOrders(userId)
                     } else {
                         val errorMsg = body?.message ?: body?.error ?: "Registration failed. Please try again."
                         _uiState.update {
@@ -690,31 +688,63 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // Fetch customer live orders using GET routes.php?action=get_customer_orders&customer_id={id}
-    fun fetchCustomerOrders() {
-        val currCustomerId = _uiState.value.currentCustomerId
-        _uiState.update { it.copy(isFetchingOrders = true) }
+    // Fetch customer live orders using GET routes.php?action=get_customer_orders&customer_id={id}&user_id={id}
+    fun fetchOrders(customerId: Int = _uiState.value.currentCustomerId, isSilent: Boolean = false) {
+        val targetId = if (customerId > 0) customerId else sessionManager.getUserId()
+        if (targetId <= 0) {
+            Log.w("ORDERS_DEBUG", "fetchOrders aborted: invalid customerId=$targetId")
+            return
+        }
+
+        Log.d("ORDERS_DEBUG", "fetchOrders initiated for customerId: $targetId (silent=$isSilent)")
+
+        // Only show loading if the list is completely empty (initial load)
+        if (!isSilent && _uiState.value.remoteOrders.isEmpty()) {
+            _uiState.update { it.copy(isFetchingOrders = true) }
+        }
+
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.apiService.getCustomerOrders("get_customer_orders", customerId = currCustomerId)
+                val response = RetrofitClient.apiService.getCustomerOrders(
+                    action = "get_customer_orders",
+                    customerId = targetId,
+                    userId = targetId
+                )
                 val body = response.body()
-                val fetchedOrders = body?.orders ?: emptyList()
 
-                _uiState.update {
-                    it.copy(
-                        isFetchingOrders = false,
-                        remoteOrders = fetchedOrders
-                    )
+                if (response.isSuccessful && body != null) {
+                    val fetchedOrders = body.orders ?: body.data ?: emptyList()
+                    Log.d("ORDERS_DEBUG", "fetchOrders success: fetched ${fetchedOrders.size} orders for targetId=$targetId")
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            isFetchingOrders = false,
+                            remoteOrders = fetchedOrders
+                        )
+                    }
+                } else {
+                    Log.w("ORDERS_DEBUG", "fetchOrders unsuccessful: code=${response.code()}")
+                    _uiState.update { it.copy(isFetchingOrders = false) }
                 }
             } catch (e: Throwable) {
+                Log.e("ORDERS_DEBUG", "fetchOrders network exception: ${e.message}", e)
+                // Preserve existing remoteOrders state on network exception
                 _uiState.update {
-                    it.copy(
-                        isFetchingOrders = false,
-                        snackbarMessage = "Unable to connect to live backend. Please check network."
-                    )
+                    it.copy(isFetchingOrders = false)
                 }
             }
         }
+    }
+
+    fun fetchOrdersForLoggedInUser(userId: Int = _uiState.value.currentCustomerId) {
+        val targetId = if (userId > 0) userId else sessionManager.getUserId()
+        if (targetId > 0) {
+            fetchOrders(targetId, isSilent = false)
+        }
+    }
+
+    fun fetchCustomerOrders() {
+        val targetId = if (_uiState.value.currentCustomerId > 0) _uiState.value.currentCustomerId else sessionManager.getUserId()
+        fetchOrders(targetId, isSilent = false)
     }
 
     // Submit Order function connected to POST /api/routes.php?action=create_laundry_order
@@ -780,18 +810,18 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                     estimatedDelivery = estDelivery
                 )
 
-                orderDao.insertOrder(newOrderEntity)
-
                 val completedCount = sessionManager.incrementCompletedOrdersCount()
                 val shouldPromptReview = completedCount >= 3 && !sessionManager.hasPromptedForReview()
 
                 _uiState.update {
+                    val updatedPastOrders = listOf(newOrderEntity) + it.pastOrdersList.filter { order -> order.orderId != newOrderEntity.orderId }
                     it.copy(
                         isSubmittingOrder = false,
                         showOrderSuccessDialog = true,
                         pendingReviewPromptOnCheckout = shouldPromptReview,
                         lastSubmittedOrderId = orderId,
                         currentActiveOrder = newOrderEntity,
+                        pastOrdersList = updatedPastOrders,
                         cartItems = emptyList(), // Clear local cart after order
                         snackbarMessage = "Order $orderId Placed Successfully!"
                     )
@@ -844,6 +874,8 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun generateInvoiceForLocalOrder(order: OrderEntity): InvoiceData {
         val state = _uiState.value
+        val userName = sessionManager.getUserName()?.takeIf { it.isNotBlank() } ?: state.userProfileName.takeIf { it.isNotBlank() } ?: "Valued Customer"
+        val userPhone = sessionManager.getUserPhone()?.takeIf { it.isNotBlank() } ?: state.userProfilePhone.takeIf { it.isNotBlank() } ?: "+92 300 0000000"
         val rawItems = if (order.itemsSummaryJson.isNotBlank()) order.itemsSummaryJson.split("\n") else emptyList()
         
         val itemsList = rawItems.map { line ->
@@ -872,8 +904,8 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             invoiceNumber = "INV-2026-${order.orderId}",
             orderId = order.orderId,
             invoiceDate = order.date,
-            customerName = state.userProfileName,
-            customerPhone = state.userProfilePhone,
+            customerName = userName,
+            customerPhone = userPhone,
             deliveryAddress = "${order.address}, ${order.area}",
             serviceTier = order.serviceTier,
             items = if (itemsList.isNotEmpty()) itemsList else listOf(InvoiceItemData("Dry Cleaning & Pressing Service", 1, subtotal, subtotal)),
@@ -886,6 +918,8 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun generateInvoiceForRemoteOrder(order: RemoteOrder): InvoiceData {
         val state = _uiState.value
+        val userName = sessionManager.getUserName()?.takeIf { it.isNotBlank() } ?: state.userProfileName.takeIf { it.isNotBlank() } ?: "Valued Customer"
+        val userPhone = sessionManager.getUserPhone()?.takeIf { it.isNotBlank() } ?: state.userProfilePhone.takeIf { it.isNotBlank() } ?: "+92 300 0000000"
         val itemsList = order.items?.map { req ->
             val qty = req.qty ?: 1
             val name = req.item ?: "Garment Service"
@@ -907,9 +941,9 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             invoiceNumber = "INV-2026-${order.displayOrderId}",
             orderId = order.displayOrderId,
             invoiceDate = order.displayDate,
-            customerName = state.userProfileName,
-            customerPhone = state.userProfilePhone,
-            deliveryAddress = order.pickup_address ?: "DHA Phase 6, Karachi",
+            customerName = userName,
+            customerPhone = userPhone,
+            deliveryAddress = order.pickup_address ?: state.userAddress.ifBlank { "DHA Phase 6, Karachi" },
             serviceTier = order.service_tier ?: "Regular Care",
             items = if (itemsList.isNotEmpty()) itemsList else listOf(InvoiceItemData("Dry Cleaning & Pressing Care", 1, subtotal, subtotal)),
             subtotalPKR = subtotal,
@@ -921,6 +955,8 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun generateCartInvoice(): InvoiceData {
         val state = _uiState.value
+        val userName = sessionManager.getUserName()?.takeIf { it.isNotBlank() } ?: state.userProfileName.takeIf { it.isNotBlank() } ?: "Valued Customer"
+        val userPhone = sessionManager.getUserPhone()?.takeIf { it.isNotBlank() } ?: state.userProfilePhone.takeIf { it.isNotBlank() } ?: "+92 300 0000000"
         val itemsList = state.cartItems.map { cart ->
             val name = cart.garmentItem?.name ?: cart.careProduct?.name ?: "Care Item"
             InvoiceItemData(
@@ -939,8 +975,8 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             invoiceNumber = "DRAFT-2026-QUOTE",
             orderId = "PRE-ORDER-QUOTE",
             invoiceDate = state.pickupSchedule.date,
-            customerName = state.userProfileName,
-            customerPhone = state.userProfilePhone,
+            customerName = userName,
+            customerPhone = userPhone,
             deliveryAddress = "${state.pickupSchedule.streetAddress}, ${state.pickupSchedule.area}",
             serviceTier = state.selectedServiceTier.title,
             items = if (itemsList.isNotEmpty()) itemsList else listOf(InvoiceItemData("Laundry & Pressing Care", 1, subtotal, subtotal)),
@@ -1009,28 +1045,80 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 com.example.util.NotificationHelper.showOrderNotification(
                     context = getApplication(),
                     title = "Order Confirmed: #$orderId",
-                    message = "Pickup request for order #$orderId confirmed. Rider assigned.",
-                    orderId = orderId
-                )
-
-                delay(7000)
-                orderDao.updateOrderStatus(orderId, 1)
-                com.example.util.NotificationHelper.showOrderNotification(
-                    context = getApplication(),
-                    title = "Order #$orderId: Picked Up",
-                    message = "Your garments were picked up and are currently undergoing eco-solvent washing & pressing.",
-                    orderId = orderId
-                )
-
-                delay(9000)
-                orderDao.updateOrderStatus(orderId, 2)
-                com.example.util.NotificationHelper.showOrderNotification(
-                    context = getApplication(),
-                    title = "Order #$orderId: Out for Delivery",
-                    message = "Fresh & ironed garments are out for delivery with your assigned delivery captain.",
+                    message = "Pickup request for order #$orderId confirmed. Status: COLLECTING",
                     orderId = orderId
                 )
             } catch (_: Exception) {}
         }
+    }
+
+    fun updateNotificationSetting(settingType: String, enabled: Boolean) {
+        val topicName = when (settingType) {
+            "pickup" -> {
+                sessionManager.setNotifPickupEnabled(enabled)
+                _uiState.update { it.copy(isNotifPickupRemindersEnabled = enabled) }
+                "topic_pickup_reminders"
+            }
+            "status" -> {
+                sessionManager.setNotifStatusEnabled(enabled)
+                _uiState.update { it.copy(isNotifStatusUpdatesEnabled = enabled) }
+                "topic_status_updates"
+            }
+            "delivery" -> {
+                sessionManager.setNotifDeliveryEnabled(enabled)
+                _uiState.update { it.copy(isNotifDeliveryAlertsEnabled = enabled) }
+                "topic_delivery_alerts"
+            }
+            "promos" -> {
+                sessionManager.setNotifPromosEnabled(enabled)
+                _uiState.update { it.copy(isNotifPromosEnabled = enabled) }
+                "topic_promos"
+            }
+            "whatsapp" -> {
+                sessionManager.setNotifWhatsappSyncEnabled(enabled)
+                _uiState.update { it.copy(isNotifWhatsappSyncEnabled = enabled) }
+                "topic_whatsapp_sync"
+            }
+            else -> null
+        }
+
+        val statusLabel = if (enabled) "subscribed" else "unsubscribed"
+        val labelName = when (settingType) {
+            "pickup" -> "Pickup reminders"
+            "status" -> "Service status updates"
+            "delivery" -> "Delivery arrival alerts"
+            "promos" -> "Promotions & care tips"
+            "whatsapp" -> "WhatsApp parallel sync"
+            else -> "Notification setting"
+        }
+
+        _uiState.update { it.copy(snackbarMessage = "$labelName $statusLabel successfully.") }
+
+        // Subscribe / Unsubscribe FCM Topic asynchronously
+        viewModelScope.launch {
+            try {
+                if (topicName != null) {
+                    val fcm = com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                    if (enabled) {
+                        fcm.subscribeToTopic(topicName)
+                    } else {
+                        fcm.unsubscribeFromTopic(topicName)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.d("SnowWhiteFCM", "FCM topic subscription handled: ${e.message}")
+            }
+        }
+    }
+
+    fun sendTestNotification() {
+        val activeId = _uiState.value.currentActiveOrder?.orderId ?: "SW-78249"
+        com.example.util.NotificationHelper.showOrderNotification(
+            context = getApplication(),
+            title = "SnowWhite FCM Test Alert",
+            message = "Your order #$activeId is currently undergoing eco-friendly dry cleaning. Real-time push updates active!",
+            orderId = activeId
+        )
+        _uiState.update { it.copy(snackbarMessage = "Test push alert dispatched to device!") }
     }
 }
