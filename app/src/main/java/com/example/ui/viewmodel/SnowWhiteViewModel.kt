@@ -80,6 +80,7 @@ data class UiState(
     val isSubmittingOrder: Boolean = false,
     val isFetchingOrders: Boolean = false,
     val remoteOrders: List<RemoteOrder> = emptyList(),
+    val chatMessages: List<com.example.data.model.ChatMessage> = emptyList(),
     val showOrderSuccessDialog: Boolean = false,
     val lastSubmittedOrderId: String? = null,
     val currentActiveOrder: OrderEntity? = null,
@@ -723,6 +724,31 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // Fetch customer live orders using GET routes.php?action=get_customer_orders&customer_id={id}&user_id={id}
+    
+    fun fetchMessages(orderId: Int) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getChatMessages(
+                    action = "get_chat_messages",
+                    orderId = orderId
+                )
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    val list = body?.data ?: body?.messages ?: emptyList()
+                    _uiState.update { currentState ->
+                        if (currentState.chatMessages == list) {
+                            currentState
+                        } else {
+                            currentState.copy(chatMessages = list)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("CHAT_DEBUG", "Failed to fetch chat messages: ${e.message}")
+            }
+        }
+    }
+
     fun fetchOrders(customerId: Int = _uiState.value.currentCustomerId, isSilent: Boolean = false) {
         val targetId = if (customerId > 0) customerId else sessionManager.getUserId()
         if (targetId <= 0) {
@@ -771,9 +797,12 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             } catch (e: Throwable) {
                 Log.e("ORDERS_DEBUG", "fetchOrders network exception: ${e.message}", e)
-                // CRITICAL: Preserve existing remoteOrders state on network exception
+                // Exposed error to UI to catch JSON formatting issues instantly
                 _uiState.update {
-                    it.copy(isFetchingOrders = false)
+                    it.copy(
+                        isFetchingOrders = false,
+                        snackbarMessage = "Fetch Error: ${e.message?.take(50)}"
+                    )
                 }
             }
         }
@@ -806,8 +835,8 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 } else if (item.quantity > 0) item.totalAmountPKR / item.quantity else 0
                 OrderItemRequest(
                     item = name,
-                    qty = item.quantity,
-                    price = price
+                    rawQty = item.quantity,
+                    rawPrice = price
                 )
             }
 

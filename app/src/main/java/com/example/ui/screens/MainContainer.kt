@@ -69,6 +69,11 @@ fun MainContainer(
         openSupportWhatsApp(context)
     }
 
+    // ALWAYS fetch data at the root container to ensure it is immediately available
+    LaunchedEffect(Unit) {
+        viewModel.refreshCatalogAndOrders()
+    }
+
     LaunchedEffect(uiState.currentScreen) {
         focusManager.clearFocus()
     }
@@ -171,6 +176,8 @@ fun MainContainer(
                     mySenderId = uiState.currentCustomerId,
                     orderCode = screen.orderCode,
                     otherPartyName = screen.otherPartyName,
+                    chatMessages = uiState.chatMessages,
+                    viewModel = viewModel,
                     onBackClick = { viewModel.navigateTo(Screen.OrderHistory) }
                 )
                 SnackbarHost(

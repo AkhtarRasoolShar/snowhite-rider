@@ -146,16 +146,18 @@ fun OrderHistoryScreen(
         }
     }
 
-    // Fetch on initial screen entry if empty, and gently sync every 30s only when active orders exist
+    // ALWAYS fetch on initial screen entry to ensure we have the latest orders
+    LaunchedEffect(Unit) {
+        if (onFetchOrders != null && userId > 0) {
+            onFetchOrders(userId)
+        } else {
+            onRefreshOrders()
+        }
+    }
+
+    // Gently sync every 30s only when active orders exist
     LaunchedEffect(userId, hasActiveOrders) {
         Log.d("ORDERS_DEBUG", "OrderHistoryScreen loaded for ID: $userId (hasActiveOrders=$hasActiveOrders)")
-        if (remoteOrders.isEmpty()) {
-            if (onFetchOrders != null && userId > 0) {
-                onFetchOrders(userId)
-            } else {
-                onRefreshOrders()
-            }
-        }
         if (hasActiveOrders && userId > 0) {
             while (true) {
                 kotlinx.coroutines.delay(30000L) // 30 seconds polite sync

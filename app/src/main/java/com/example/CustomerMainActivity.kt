@@ -42,6 +42,10 @@ class CustomerMainActivity : ComponentActivity() {
 
                 // REAL-TIME STATUS SYNC: Polite background poll if needed
                 LaunchedEffect(Unit) {
+                    val initialId = uiState.currentCustomerId
+                    if (initialId > 0) {
+                        viewModel.fetchOrders(initialId, isSilent = true)
+                    }
                     while (true) {
                         delay(30000L) // Poll every 30 seconds
                         val customerId = uiState.currentCustomerId
@@ -63,6 +67,10 @@ fun CustomerMainScreen(viewModel: SnowWhiteViewModel = viewModel()) {
 
     // REAL-TIME STATUS SYNC: Polite background poll if needed
     LaunchedEffect(Unit) {
+        val initialId = uiState.currentCustomerId
+        if (initialId > 0) {
+            viewModel.fetchOrders(initialId, isSilent = true)
+        }
         while (true) {
             delay(30000L) // Poll every 30 seconds
             val customerId = uiState.currentCustomerId

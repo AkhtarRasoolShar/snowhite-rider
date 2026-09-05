@@ -189,94 +189,94 @@ fun LiveOrderTrackingScreen(
         }
 
         // Assigned Captain / Rider Details Section
-        if (!riderName.isNullOrBlank()) {
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        val displayRider = if (!riderName.isNullOrBlank()) riderName else "SnoWhite Captain"
+        val displayPhone = if (!riderPhone.isNullOrBlank()) riderPhone else "+92 301 8637011"
+        
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
+                .testTag("your_captain_card")
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
-                    .testTag("your_captain_card")
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(SoftLightBlue),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Driver Avatar",
+                            tint = DeepBlue,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Your Captain",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF64748B)
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = displayRider,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Verified, contentDescription = "Verified Rider", tint = DeepBlue, modifier = Modifier.size(14.dp))
+                        }
+                        Text(
+                            text = "SnoWhite Delivery Captain",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Chat and WhatsApp Contact Buttons
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(CircleShape)
-                                .background(SoftLightBlue),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Driver Avatar",
-                                tint = DeepBlue,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column {
-                            Text(
-                                text = "Your Captain",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF64748B)
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = riderName,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.Default.Verified, contentDescription = "Verified Rider", tint = DeepBlue, modifier = Modifier.size(14.dp))
-                            }
-                            Text(
-                                text = "SnoWhite Delivery Captain",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    Button(
+                        onClick = {
+                            val numId = displayOrderId.filter { it.isDigit() }.toIntOrNull() ?: 1
+                            onChatWithRiderClick?.invoke(numId, displayOrderId, displayRider)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                        modifier = Modifier.testTag("chat_captain_live_button")
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Live Chat", modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Chat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    // Chat and WhatsApp Contact Buttons
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = {
-                                val numId = displayOrderId.filter { it.isDigit() }.toIntOrNull() ?: 1
-                                onChatWithRiderClick?.invoke(numId, displayOrderId, riderName)
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-                            modifier = Modifier.testTag("chat_captain_live_button")
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Live Chat", modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Chat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
+                    val cleanPhone = displayPhone
+                        .removePrefix("+92")
+                        .removePrefix("92")
+                        .removePrefix("0")
+                        .replace(" ", "")
+                        .trim()
 
-                        val cleanPhone = (riderPhone ?: "")
-                            .removePrefix("+92")
-                            .removePrefix("92")
-                            .removePrefix("0")
-                            .replace(" ", "")
-                            .trim()
-
-                        Button(
+                    Button(
                             onClick = {
                                 val whatsappUrl = "https://wa.me/92$cleanPhone"
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
@@ -296,45 +296,7 @@ fun LiveOrderTrackingScreen(
                     }
                 }
             }
-        } else {
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFEF3C7)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = "Pending Captain",
-                            tint = Color(0xFFD97706),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Waiting for a Captain to accept the order",
-                        fontSize = 13.sp,
-                        fontStyle = FontStyle.Italic,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF64748B)
-                    )
-                }
-            }
-        }
+
 
         // Live Step Progress Bar (Strict Status Sync)
         Card(

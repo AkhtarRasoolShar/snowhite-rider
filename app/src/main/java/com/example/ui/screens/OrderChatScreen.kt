@@ -36,6 +36,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -48,11 +49,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -94,6 +102,7 @@ import kotlinx.coroutines.launch
  * @param otherPartyName Name of the person being chatted with
  * @param onBackClick Navigation back callback
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderChatScreen(
     orderId: Int,
@@ -101,6 +110,8 @@ fun OrderChatScreen(
     mySenderId: Int,
     orderCode: String = "SW-$orderId",
     otherPartyName: String = if (mySenderType.equals("customer", ignoreCase = true)) "Delivery Captain" else "Customer",
+    chatMessages: List<ChatMessage> = emptyList(),
+    viewModel: com.example.ui.viewmodel.SnowWhiteViewModel,
     onBackClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -112,42 +123,60 @@ fun OrderChatScreen(
     var isSending by remember { mutableStateOf(false) }
     var isInitialLoading by remember { mutableStateOf(true) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var isAgentTyping by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
 
     val isCustomerView = mySenderType.equals("customer", ignoreCase = true)
     val otherPartyRole = if (isCustomerView) "SnoWhite Delivery Captain" else "SnoWhite Customer"
 
-    // Real-time polling function: fetches messages for orderId
-    suspend fun fetchMessages(silent: Boolean = false) {
-        if (!silent && messages.isEmpty()) {
-            isInitialLoading = true
-        }
-        try {
-            val response = RetrofitClient.apiService.getChatMessages(
-                action = "get_chat_messages",
-                orderId = orderId
-            )
-            if (response.isSuccessful) {
-                val body = response.body()
-                val list = body?.data ?: body?.messages ?: emptyList()
-                if (list.isNotEmpty()) {
-                    // Update list only if there are new items or differences to prevent unnecessary UI jitter
-                    if (list.size != messages.size || list.lastOrNull()?.id != messages.lastOrNull()?.id) {
-                        messages.clear()
-                        messages.addAll(list)
-                        coroutineScope.launch {
-                            delay(100)
-                            if (messages.isNotEmpty()) {
-                                listState.animateScrollToItem(messages.size - 1)
-                            }
+    var previousCount by remember { mutableIntStateOf(0) }
+
+    // Sync external messages from ViewModel State & Play Tone
+    LaunchedEffect(chatMessages.size) {
+        val currentSize = chatMessages.size
+        if (chatMessages.isNotEmpty()) {
+            if (chatMessages.size != messages.size || chatMessages.lastOrNull()?.id != messages.lastOrNull()?.id) {
+                messages.clear()
+                messages.addAll(chatMessages)
+                delay(100)
+                
+                // 1. Auto-Scroll to bottom
+                if (currentSize > 0) {
+                    listState.animateScrollToItem(currentSize - 1)
+                }
+                
+                // 2. Play Notification Tone for NEW INCOMING messages
+                if (currentSize > previousCount && previousCount > 0) {
+                    val lastMessage = chatMessages.last()
+                    val isIncoming = lastMessage.senderType?.equals(mySenderType, ignoreCase = true) != true
+                    
+                    if (isIncoming) {
+                        try {
+                            val uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+                            val ringtone = android.media.RingtoneManager.getRingtone(context, uri)
+                            ringtone.play()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
                 }
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            Log.e("CHAT_DEBUG", "Failed to fetch chat messages: ${e.localizedMessage}")
-        } finally {
+            isInitialLoading = false
+            isRefreshing = false
+        }
+        previousCount = currentSize
+    }
+
+    // Wrap the viewModel fetch in a convenient local function
+    fun fetchMessages(silent: Boolean = false) {
+        if (!silent && messages.isEmpty()) {
+            isInitialLoading = true
+        }
+        viewModel.fetchMessages(orderId)
+        
+        // Timeout to disable loading spinners if it gets stuck
+        coroutineScope.launch {
+            delay(1500)
             isInitialLoading = false
             isRefreshing = false
         }
@@ -187,6 +216,19 @@ fun OrderChatScreen(
                 val response = RetrofitClient.apiService.sendChatMessage("send_chat_message", req)
                 if (!response.isSuccessful) {
                     Log.w("CHAT_DEBUG", "Send chat API failed with code: ${response.code()}")
+                } else {
+                    fetchMessages(silent = true)
+                    if (isCustomerView) {
+                        coroutineScope.launch {
+                            delay(500)
+                            isAgentTyping = true
+                            if (messages.isNotEmpty()) {
+                                listState.animateScrollToItem(messages.size)
+                            }
+                            delay(3000)
+                            isAgentTyping = false
+                        }
+                    }
                 }
                 // Refresh to sync exact server timestamp and IDs
                 fetchMessages(silent = true)
@@ -202,10 +244,9 @@ fun OrderChatScreen(
 
     // Polling effect every 3 seconds to fetch new messages in real-time
     LaunchedEffect(orderId) {
-        fetchMessages(silent = false)
-        while (isActive) {
-            delay(3000L)
-            fetchMessages(silent = true)
+        while(true) {
+            viewModel.fetchMessages(orderId)
+            kotlinx.coroutines.delay(3000) // Poll every 3 seconds
         }
     }
 
@@ -359,6 +400,14 @@ fun OrderChatScreen(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { 
+                    isRefreshing = true
+                    coroutineScope.launch { fetchMessages(silent = false) }
+                },
+                modifier = Modifier.fillMaxSize()
+            ) {
             if (isInitialLoading && messages.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -416,50 +465,6 @@ fun OrderChatScreen(
                         textAlign = TextAlign.Center,
                         lineHeight = 18.sp
                     )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Text(
-                        text = "Quick Prompts:",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = DeepBlue
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    val quickPrompts = if (isCustomerView) {
-                        listOf(
-                            "Hi! Please call when you reach.",
-                            "Please handle the embroidery garments with care.",
-                            "I'm at home, ready for pickup.",
-                            "What is the estimated delivery time?"
-                        )
-                    } else {
-                        listOf(
-                            "Assalam-o-Alaikum! I am on my way.",
-                            "I have arrived at your building entrance.",
-                            "Your laundry has been collected safely.",
-                            "Order dispatched for delivery!"
-                        )
-                    }
-
-                    quickPrompts.forEach { prompt ->
-                        Surface(
-                            modifier = Modifier
-                                .padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { sendMessage(prompt) },
-                            color = PureWhite,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, LightBlueBorder)
-                        ) {
-                            Text(
-                                text = "💬  \"$prompt\"",
-                                fontSize = 12.sp,
-                                color = DeepBlue,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                            )
-                        }
-                    }
                 }
             } else {
                 LazyColumn(
@@ -471,50 +476,22 @@ fun OrderChatScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(messages, key = { it.id ?: it.hashCode() }) { msg ->
-                        val isMe = (msg.senderType?.lowercase() == mySenderType.lowercase()) ||
-                                (msg.senderId == mySenderId)
+                        // STRICT DIFFERENTIATION: Only match senderType to avoid crossing streams if senderIds happen to match
+                        val isMe = msg.senderType?.equals(mySenderType, ignoreCase = true) == true
 
                         ChatBubbleItem(
                             message = msg,
                             isMe = isMe
                         )
                     }
-                }
-            }
-        }
-
-        // Quick Suggestion Chips (above input bar when chat has messages)
-        if (messages.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(OffWhiteBg)
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val chips = if (isCustomerView) {
-                    listOf("I'm at the gate", "Call when arrived", "Thanks!")
-                } else {
-                    listOf("On my way", "Arrived at location", "All collected")
-                }
-                chips.forEach { chip ->
-                    Surface(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable { sendMessage(chip) },
-                        color = PureWhite,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, LightBlueBorder)
-                    ) {
-                        Text(
-                            text = chip,
-                            fontSize = 11.sp,
-                            color = DeepBlue,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
+                    if (isAgentTyping) {
+                        item {
+                            TypingIndicatorBubble(otherPartyRole)
+                        }
                     }
                 }
             }
+            } // Close PullToRefreshBox
         }
 
         // Bottom WhatsApp-style Input Bar
@@ -660,11 +637,67 @@ private fun ChatBubbleItem(
 
                     if (isMe) {
                         Spacer(modifier = Modifier.width(3.dp))
+                        val isMessageRead = message.isRead == "1" || message.isRead == "true"
                         Icon(
-                            imageVector = Icons.Default.DoneAll,
-                            contentDescription = "Delivered",
-                            tint = Color(0xFF90CAF9),
+                            imageVector = if (isMessageRead) Icons.Default.DoneAll else Icons.Default.Check,
+                            contentDescription = if (isMessageRead) "Read" else "Sent",
+                            tint = if (isMessageRead) Color(0xFF64B5F6) else Color(0xFFB0BEC5),
                             modifier = Modifier.size(13.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TypingIndicatorBubble(role: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Column(horizontalAlignment = Alignment.Start) {
+            Text(
+                text = role,
+                fontSize = 11.sp,
+                color = TextSecondaryMuted,
+                modifier = Modifier.padding(start = 12.dp, bottom = 2.dp)
+            )
+            Surface(
+                shape = RoundedCornerShape(
+                    topStart = 4.dp,
+                    topEnd = 16.dp,
+                    bottomEnd = 16.dp,
+                    bottomStart = 16.dp
+                ),
+                color = PureWhite,
+                shadowElevation = 1.dp,
+                modifier = Modifier.widthIn(min = 60.dp, max = 100.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val transition = rememberInfiniteTransition(label = "typing")
+                    for (i in 0 until 3) {
+                        val alpha by transition.animateFloat(
+                            initialValue = 0.3f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 500, delayMillis = i * 150),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "dotAlpha"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(DeepBlue.copy(alpha = alpha))
                         )
                     }
                 }

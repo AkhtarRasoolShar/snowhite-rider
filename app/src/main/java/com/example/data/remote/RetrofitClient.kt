@@ -212,86 +212,9 @@ object RetrofitClient {
                     .build()
             }
 
-            if (url.contains("action=get_chat_messages")) {
-                val orderIdParam = request.url.queryParameter("order_id") ?: "1"
-                val mockChatList = inMemoryMockChats.getOrPut(orderIdParam) {
-                    mutableListOf(
-                        com.example.data.model.ChatMessage(
-                            id = 1,
-                            orderId = orderIdParam.toIntOrNull() ?: 1,
-                            senderType = "rider",
-                            senderId = 201,
-                            message = "Assalam-o-Alaikum! I am your delivery captain Tariq. I have received your laundry order.",
-                            createdAt = "11:30 AM"
-                        ),
-                        com.example.data.model.ChatMessage(
-                            id = 2,
-                            orderId = orderIdParam.toIntOrNull() ?: 1,
-                            senderType = "customer",
-                            senderId = 101,
-                            message = "Walaikum Assalam Tariq Bhai! Please ensure gentle dry clean for the wedding wear.",
-                            createdAt = "11:32 AM"
-                        ),
-                        com.example.data.model.ChatMessage(
-                            id = 3,
-                            orderId = orderIdParam.toIntOrNull() ?: 1,
-                            senderType = "rider",
-                            senderId = 201,
-                            message = "Understood! Special steam press and delicate packaging will be done. I'll notify you upon dispatch.",
-                            createdAt = "11:34 AM"
-                        )
-                    )
-                }
-                val json = gson.toJson(
-                    mapOf(
-                        "status" to "success",
-                        "success" to true,
-                        "data" to mockChatList,
-                        "messages" to mockChatList
-                    )
-                )
-                return Response.Builder()
-                    .code(200)
-                    .message("OK")
-                    .protocol(Protocol.HTTP_1_1)
-                    .request(request)
-                    .body(json.toResponseBody("application/json".toMediaType()))
-                    .build()
-            }
-
-            if (url.contains("action=send_chat_message")) {
-                val orderIdParam = request.url.queryParameter("order_id") ?: "1"
-                val list = inMemoryMockChats.getOrPut(orderIdParam) { mutableListOf() }
-                val newMsg = com.example.data.model.ChatMessage(
-                    id = list.size + 1,
-                    orderId = orderIdParam.toIntOrNull() ?: 1,
-                    senderType = "customer",
-                    senderId = 101,
-                    message = "Thank you! Looking forward to it.",
-                    createdAt = "Just now"
-                )
-                list.add(newMsg)
-                val json = gson.toJson(
-                    mapOf(
-                        "status" to "success",
-                        "success" to true,
-                        "data" to newMsg
-                    )
-                )
-                return Response.Builder()
-                    .code(200)
-                    .message("OK")
-                    .protocol(Protocol.HTTP_1_1)
-                    .request(request)
-                    .body(json.toResponseBody("application/json".toMediaType()))
-                    .build()
-            }
-
             return chain.proceed(request)
         }
     }
-
-    private val inMemoryMockChats = mutableMapOf<String, MutableList<com.example.data.model.ChatMessage>>()
 
     private val gson = GsonBuilder()
         

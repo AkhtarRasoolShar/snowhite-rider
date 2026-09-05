@@ -95,9 +95,22 @@ enum class OrderStatus(val stepIndex: Int, val title: String, val subtitle: Stri
 
 data class OrderItemRequest(
     @SerializedName("item") val item: String? = null,
-    @SerializedName("qty") val qty: Int? = null,
-    @SerializedName("price") val price: Int? = null
-)
+    @SerializedName("qty") val rawQty: Any? = null,
+    @SerializedName("price") val rawPrice: Any? = null
+) {
+    val qty: Int
+        get() = when (rawQty) {
+            is Number -> rawQty.toInt()
+            is String -> rawQty.toDoubleOrNull()?.toInt() ?: 0
+            else -> 0
+        }
+    val price: Int
+        get() = when (rawPrice) {
+            is Number -> rawPrice.toInt()
+            is String -> rawPrice.toDoubleOrNull()?.toInt() ?: 0
+            else -> 0
+        }
+}
 
 data class CreateOrderRequest(
     @SerializedName("customer_id") val customer_id: Int? = 1,
@@ -135,15 +148,17 @@ data class RemoteOrder(
     @SerializedName("service_tier") val service_tier: String? = null,
     @SerializedName("pickup_address") val pickup_address: String? = null,
     @SerializedName("delivery_address") val delivery_address: String? = null,
-    @SerializedName("total_amount") val total_amount: Int? = 0,
-    @SerializedName("totalAmountPKR") val totalAmountPKR: Int? = 0,
+    @SerializedName("total_amount") val total_amount: String? = null,
+    @SerializedName("totalAmountPKR") val totalAmountPKR: String? = null,
     @SerializedName("status") val status: String? = null,
-    @SerializedName("items") val items: List<OrderItemRequest>? = null,
+    // Removed items list due to PHP empty string parsing crashes. Can be safely restored when backend issues arrays.
     @SerializedName("rider_name") val rider_name: String? = null,
     @SerializedName("rider_phone") val rider_phone: String? = null,
     @SerializedName("riderName") val riderNameAlt: String? = null,
     @SerializedName("riderPhone") val riderPhoneAlt: String? = null
 ) {
+    val items: List<OrderItemRequest> = emptyList()
+
     val displayOrderId: String
         get() = order_id ?: orderId ?: id ?: "SW-1001"
 
@@ -158,7 +173,7 @@ data class RemoteOrder(
         }
 
     val displayAmount: Int
-        get() = if (total_amount != null && total_amount > 0) total_amount else (totalAmountPKR ?: 0)
+        get() = (total_amount ?: totalAmountPKR)?.toDoubleOrNull()?.toInt() ?: 0
 
     val displayStatus: String
         get() = (status ?: "COLLECTING").replace("_", " ").uppercase()
@@ -295,7 +310,8 @@ data class ChatMessage(
     @SerializedName("sender_type") val senderType: String? = null, // "customer" or "rider"
     @SerializedName("sender_id") val senderId: Int? = null,
     @SerializedName("message") val message: String? = null,
-    @SerializedName("created_at") val createdAt: String? = null
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("is_read") val isRead: String? = "0"
 ) {
     val isFromCustomer: Boolean
         get() = senderType.equals("customer", ignoreCase = true)
