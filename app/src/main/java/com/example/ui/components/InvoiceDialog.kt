@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -151,7 +152,8 @@ fun InvoiceDialog(
                 // Scrollable Invoice Content Body
                 Column(
                     modifier = Modifier
-                        .weight(1f, fill = false)
+                        .fillMaxWidth()
+                        .heightIn(max = 520.dp)
                         .verticalScroll(rememberScrollState())
                         .border(1.dp, LightBlueBorder, RoundedCornerShape(16.dp))
                         .padding(16.dp)
@@ -163,18 +165,9 @@ fun InvoiceDialog(
                         verticalAlignment = Alignment.Top
                     ) {
                         Column {
-                            val context = LocalContext.current
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data("https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png")
-                                    .allowHardware(false)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "SnoWhite Logo",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.height(36.dp)
+                            SnowhiteLogoBadge(
+                                modifier = Modifier.padding(bottom = 6.dp)
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "SnoWhite Dry Cleaners (Pvt) Ltd.",
                                 fontSize = 11.sp,

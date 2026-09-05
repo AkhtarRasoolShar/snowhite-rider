@@ -40,12 +40,14 @@ class CustomerMainActivity : ComponentActivity() {
                 val viewModel: SnowWhiteViewModel = viewModel()
                 val uiState by viewModel.uiState.collectAsState()
 
-                // REAL-TIME STATUS SYNC: Poll get_customer_orders API every 5 seconds
+                // REAL-TIME STATUS SYNC: Polite background poll if needed
                 LaunchedEffect(Unit) {
                     while (true) {
+                        delay(30000L) // Poll every 30 seconds
                         val customerId = uiState.currentCustomerId
-                        viewModel.fetchOrders(customerId, isSilent = true)
-                        delay(5000L) // Poll every 5 seconds
+                        if (customerId > 0) {
+                            viewModel.fetchOrders(customerId, isSilent = true)
+                        }
                     }
                 }
 
@@ -59,12 +61,14 @@ class CustomerMainActivity : ComponentActivity() {
 fun CustomerMainScreen(viewModel: SnowWhiteViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // REAL-TIME STATUS SYNC: Poll get_customer_orders API every 5 seconds
+    // REAL-TIME STATUS SYNC: Polite background poll if needed
     LaunchedEffect(Unit) {
         while (true) {
+            delay(30000L) // Poll every 30 seconds
             val customerId = uiState.currentCustomerId
-            viewModel.fetchOrders(customerId, isSilent = true)
-            delay(5000L) // Poll every 5 seconds
+            if (customerId > 0) {
+                viewModel.fetchOrders(customerId, isSilent = true)
+            }
         }
     }
 

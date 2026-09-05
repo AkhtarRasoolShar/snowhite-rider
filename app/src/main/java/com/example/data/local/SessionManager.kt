@@ -19,6 +19,7 @@ class SessionManager(context: Context) {
         private const val KEY_PHONE = "phone"
         private const val KEY_CUSTOMER_PHONE = "customer_phone"
         private const val KEY_CUSTOMER_ADDRESS = "customer_address"
+        private const val KEY_DELIVERY_ADDRESS = "delivery_address"
         private const val KEY_COMPLETED_ORDERS_COUNT = "completed_orders_count"
         private const val KEY_HAS_PROMPTED_REVIEW = "has_prompted_review"
 
@@ -104,6 +105,22 @@ class SessionManager(context: Context) {
     fun getAddress(): String {
         return try {
             prefs?.getString(KEY_CUSTOMER_ADDRESS, "") ?: ""
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    fun saveDeliveryAddress(address: String) {
+        try {
+            prefs?.edit()
+                ?.putString(KEY_DELIVERY_ADDRESS, address)
+                ?.apply()
+        } catch (_: Exception) {}
+    }
+
+    fun getDeliveryAddress(): String {
+        return try {
+            prefs?.getString(KEY_DELIVERY_ADDRESS, "") ?: ""
         } catch (_: Exception) {
             ""
         }

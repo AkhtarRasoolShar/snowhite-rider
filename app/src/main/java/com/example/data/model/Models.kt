@@ -104,6 +104,7 @@ data class CreateOrderRequest(
     @SerializedName("customer_name") val customer_name: String? = "Customer",
     @SerializedName("customer_phone") val customer_phone: String? = "+923000000000",
     @SerializedName("pickup_address") val pickup_address: String? = null,
+    @SerializedName("delivery_address") val delivery_address: String? = null,
     @SerializedName("pickup_time_slot") val pickup_time_slot: String? = null,
     @SerializedName("service_tier") val service_tier: String? = null,
     @SerializedName("total_amount") val total_amount: Int? = null,
@@ -111,7 +112,7 @@ data class CreateOrderRequest(
 )
 
 data class CreateOrderResponse(
-    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("success") val success: Boolean? = null,
     @SerializedName("orderId") val orderId: String? = null,
     @SerializedName("order_id") val order_id: String? = null,
     @SerializedName("trackingCode") val trackingCode: String? = null,
@@ -133,6 +134,7 @@ data class RemoteOrder(
     @SerializedName("order_date") val orderDate: String? = null,
     @SerializedName("service_tier") val service_tier: String? = null,
     @SerializedName("pickup_address") val pickup_address: String? = null,
+    @SerializedName("delivery_address") val delivery_address: String? = null,
     @SerializedName("total_amount") val total_amount: Int? = 0,
     @SerializedName("totalAmountPKR") val totalAmountPKR: Int? = 0,
     @SerializedName("status") val status: String? = null,
@@ -183,8 +185,9 @@ data class RemoteOrder(
 typealias CustomerOrder = RemoteOrder
 
 data class GetOrdersResponse(
-    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("success") val success: Boolean? = null,
     @SerializedName("status") val status: String? = null,
+    @SerializedName("message") val message: String? = null,
     @SerializedName("orders") val orders: List<RemoteOrder>? = null,
     @SerializedName("data") val data: List<RemoteOrder>? = null
 )
@@ -212,7 +215,7 @@ data class RegisterRequest(
 
 data class AuthResponse(
     @SerializedName("status") val status: String? = null,
-    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("success") val success: Boolean? = null,
     @SerializedName("message") val message: String? = null,
     @SerializedName("customer_id") val customer_id: Any? = null,
     @SerializedName("user_id") val user_id: Any? = null,
@@ -265,7 +268,7 @@ data class EmailInvoiceRequest(
 )
 
 data class EmailInvoiceResponse(
-    @SerializedName("success") val success: Boolean? = true,
+    @SerializedName("success") val success: Boolean? = null,
     @SerializedName("message") val message: String? = null,
     @SerializedName("deep_link") val deep_link: String? = null
 )
@@ -284,5 +287,51 @@ data class ApiResponse<T>(
     @SerializedName("success") val success: Boolean? = null,
     @SerializedName("message") val message: String? = null,
     @SerializedName("data") val data: T? = null
+)
+
+data class ChatMessage(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("order_id") val orderId: Int? = null,
+    @SerializedName("sender_type") val senderType: String? = null, // "customer" or "rider"
+    @SerializedName("sender_id") val senderId: Int? = null,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null
+) {
+    val isFromCustomer: Boolean
+        get() = senderType.equals("customer", ignoreCase = true)
+
+    val isFromRider: Boolean
+        get() = senderType.equals("rider", ignoreCase = true)
+
+    val formattedTime: String
+        get() {
+            if (createdAt.isNullOrBlank()) return "Just now"
+            return try {
+                if (createdAt.contains(" ")) {
+                    createdAt.substringAfter(" ").substringBeforeLast(":")
+                } else if (createdAt.contains("T")) {
+                    createdAt.substringAfter("T").substringBeforeLast(":")
+                } else {
+                    createdAt
+                }
+            } catch (_: Exception) {
+                createdAt
+            }
+        }
+}
+
+data class SendChatMessageRequest(
+    @SerializedName("order_id") val order_id: Int,
+    @SerializedName("sender_type") val sender_type: String,
+    @SerializedName("sender_id") val sender_id: Int,
+    @SerializedName("message") val message: String
+)
+
+data class ChatMessagesResponse(
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("data") val data: List<ChatMessage>? = null,
+    @SerializedName("messages") val messages: List<ChatMessage>? = null
 )
 

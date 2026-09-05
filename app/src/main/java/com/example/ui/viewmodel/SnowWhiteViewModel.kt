@@ -49,6 +49,12 @@ sealed class Screen {
     object Profile : Screen()
     object MapPicker : Screen()
     object NotificationSettings : Screen()
+    data class OrderChat(
+        val orderId: Int,
+        val orderCode: String = "SW-$orderId",
+        val otherPartyName: String = "Delivery Captain",
+        val mySenderType: String = "customer"
+    ) : Screen()
 }
 
 data class UiState(
@@ -59,6 +65,7 @@ data class UiState(
     val userProfileName: String = "Akhtar Hussain",
     val userProfilePhone: String = "+92 301 1234567",
     val userAddress: String = "",
+    val userDeliveryAddress: String = "",
     val servicesList: List<com.example.data.model.ServiceItem> = emptyList(),
     val categories: List<com.example.data.model.Category> = emptyList(),
     val products: List<com.example.data.model.Product> = emptyList(),
@@ -124,6 +131,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 userProfileName = userName ?: "Akhtar Hussain",
                 userProfilePhone = userPhone ?: "+92 301 1234567",
                 userAddress = savedAddress,
+                userDeliveryAddress = sessionManager.getDeliveryAddress(),
                 pickupSchedule = initialSchedule,
                 currentScreen = Screen.Splash,
                 isNotifPickupRemindersEnabled = notifPickup,
@@ -157,6 +165,21 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.update { it.copy(currentScreen = screen) }
         if (screen is Screen.OrderHistory) {
             fetchCustomerOrders()
+        }
+    }
+
+    fun openOrderChat(orderId: Int, orderCode: String? = null, riderName: String? = null) {
+        val code = orderCode ?: "SW-$orderId"
+        val name = riderName ?: "Delivery Captain Tariq"
+        _uiState.update {
+            it.copy(
+                currentScreen = Screen.OrderChat(
+                    orderId = orderId,
+                    orderCode = code,
+                    otherPartyName = name,
+                    mySenderType = "customer"
+                )
+            )
         }
     }
 
@@ -508,7 +531,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                     val isExplicitSuccess = isSuccess || (body != null && body.status == null && body.success == true)
                     val isError = body?.status == "error" || body?.success == false || !isExplicitSuccess
 
-                    if (!isError && body != null) {
+                    if (!isError) {
                         val userId = body.extractUserId() ?: 101
                         val userName = body.extractUserName() ?: "Akhtar Hussain"
                         val userPhone = body.extractUserPhone() ?: cleanPhone
@@ -584,7 +607,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                     val isExplicitSuccess = isSuccess || (body != null && body.status == null && body.success == true)
                     val isError = body?.status == "error" || body?.success == false || !isExplicitSuccess
 
-                    if (!isError && body != null) {
+                    if (!isError) {
                         val userId = body.extractUserId() ?: 102
                         val userName = body.extractUserName() ?: cleanName
                         val userPhone = body.extractUserPhone() ?: cleanPhone
@@ -660,6 +683,17 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             it.copy(
                 userAddress = clean,
                 pickupSchedule = it.pickupSchedule.copy(streetAddress = clean),
+                snackbarMessage = "Default pickup address updated."
+            )
+        }
+    }
+
+    fun saveUserDeliveryAddress(address: String) {
+        val clean = address.trim()
+        sessionManager.saveDeliveryAddress(clean)
+        _uiState.update {
+            it.copy(
+                userDeliveryAddress = clean,
                 snackbarMessage = "Default delivery address updated."
             )
         }
@@ -698,8 +732,9 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
         Log.d("ORDERS_DEBUG", "fetchOrders initiated for customerId: $targetId (silent=$isSilent)")
 
-        // Only show loading if the list is completely empty (initial load)
-        if (!isSilent && _uiState.value.remoteOrders.isEmpty()) {
+        // For non-silent requests (such as manual pull-to-refresh or explicit refresh), activate the loading/refreshing indicator
+        // CRITICAL: We NEVER clear remoteOrders or pastOrders prematurely here!
+        if (!isSilent) {
             _uiState.update { it.copy(isFetchingOrders = true) }
         }
 
@@ -712,22 +747,31 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 )
                 val body = response.body()
 
-                if (response.isSuccessful && body != null) {
+                // Only update the order list inside the successful response block after data is safely received
+                val isSuccess = response.isSuccessful && body != null &&
+                        (body.status.equals("success", ignoreCase = true) || body.success == true)
+
+                if (isSuccess) {
                     val fetchedOrders = body.orders ?: body.data ?: emptyList()
-                    Log.d("ORDERS_DEBUG", "fetchOrders success: fetched ${fetchedOrders.size} orders for targetId=$targetId")
+                    Log.d("ORDERS_DEBUG", "fetchOrders success: safely received ${fetchedOrders.size} orders for targetId=$targetId")
                     _uiState.update { currentState ->
-                        currentState.copy(
-                            isFetchingOrders = false,
-                            remoteOrders = fetchedOrders
-                        )
+                        if (currentState.remoteOrders == fetchedOrders && !currentState.isFetchingOrders) {
+                            currentState
+                        } else {
+                            currentState.copy(
+                                isFetchingOrders = false,
+                                remoteOrders = fetchedOrders
+                            )
+                        }
                     }
                 } else {
-                    Log.w("ORDERS_DEBUG", "fetchOrders unsuccessful: code=${response.code()}")
+                    Log.w("ORDERS_DEBUG", "fetchOrders unsuccessful or non-success status: code=${response.code()}, status=${body?.status}, message=${body?.message}")
+                    // CRITICAL: Preserve existing remoteOrders state on unsuccessful response to prevent list from disappearing
                     _uiState.update { it.copy(isFetchingOrders = false) }
                 }
             } catch (e: Throwable) {
                 Log.e("ORDERS_DEBUG", "fetchOrders network exception: ${e.message}", e)
-                // Preserve existing remoteOrders state on network exception
+                // CRITICAL: Preserve existing remoteOrders state on network exception
                 _uiState.update {
                     it.copy(isFetchingOrders = false)
                 }
@@ -742,9 +786,9 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun fetchCustomerOrders() {
+    fun fetchCustomerOrders(isSilent: Boolean = false) {
         val targetId = if (_uiState.value.currentCustomerId > 0) _uiState.value.currentCustomerId else sessionManager.getUserId()
-        fetchOrders(targetId, isSilent = false)
+        fetchOrders(targetId, isSilent = isSilent)
     }
 
     // Submit Order function connected to POST /api/routes.php?action=create_laundry_order
@@ -772,6 +816,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 customer_name = state.userProfileName,
                 customer_phone = state.userProfilePhone,
                 pickup_address = "${state.pickupSchedule.streetAddress}, ${state.pickupSchedule.area}",
+                delivery_address = state.userDeliveryAddress.ifBlank { "${state.pickupSchedule.streetAddress}, ${state.pickupSchedule.area}" },
                 pickup_time_slot = "${state.pickupSchedule.date} ${state.pickupSchedule.timeSlot}",
                 service_tier = state.selectedServiceTier.title,
                 total_amount = totalCartPricePKR,
@@ -906,7 +951,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             invoiceDate = order.date,
             customerName = userName,
             customerPhone = userPhone,
-            deliveryAddress = "${order.address}, ${order.area}",
+            deliveryAddress = state.userDeliveryAddress.ifBlank { "${order.address}, ${order.area}" },
             serviceTier = order.serviceTier,
             items = if (itemsList.isNotEmpty()) itemsList else listOf(InvoiceItemData("Dry Cleaning & Pressing Service", 1, subtotal, subtotal)),
             subtotalPKR = subtotal,
@@ -943,7 +988,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             invoiceDate = order.displayDate,
             customerName = userName,
             customerPhone = userPhone,
-            deliveryAddress = order.pickup_address ?: state.userAddress.ifBlank { "DHA Phase 6, Karachi" },
+            deliveryAddress = order.delivery_address ?: order.pickup_address ?: state.userDeliveryAddress.ifBlank { state.userAddress.ifBlank { "DHA Phase 6, Karachi" } },
             serviceTier = order.service_tier ?: "Regular Care",
             items = if (itemsList.isNotEmpty()) itemsList else listOf(InvoiceItemData("Dry Cleaning & Pressing Care", 1, subtotal, subtotal)),
             subtotalPKR = subtotal,
@@ -977,7 +1022,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             invoiceDate = state.pickupSchedule.date,
             customerName = userName,
             customerPhone = userPhone,
-            deliveryAddress = "${state.pickupSchedule.streetAddress}, ${state.pickupSchedule.area}",
+            deliveryAddress = state.userDeliveryAddress.ifBlank { "${state.pickupSchedule.streetAddress}, ${state.pickupSchedule.area}" },
             serviceTier = state.selectedServiceTier.title,
             items = if (itemsList.isNotEmpty()) itemsList else listOf(InvoiceItemData("Laundry & Pressing Care", 1, subtotal, subtotal)),
             subtotalPKR = subtotal,

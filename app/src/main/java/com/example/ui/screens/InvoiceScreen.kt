@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,6 +63,7 @@ import coil.request.ImageRequest
 import coil.compose.AsyncImage
 import com.example.data.util.InvoiceGenerator
 import com.example.ui.components.InvoiceData
+import com.example.ui.components.SnowhiteLogoBadge
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.LightBlueBorder
 import com.example.ui.theme.SoftLightBlue
@@ -81,6 +83,39 @@ fun InvoiceScreen(
     var isSendingEmail by remember { mutableStateOf(false) }
     var emailStatusMessage by remember { mutableStateOf<String?>(null) }
     var generatedDeepLink by remember { mutableStateOf<String?>(null) }
+
+    val shareText = remember(invoiceData) {
+        val itemsSummaryText = if (invoiceData.items.isNotEmpty()) {
+            invoiceData.items.joinToString("\n") { "  • ${it.quantity}x ${it.description} - Rs. ${it.totalPKR} PKR" }
+        } else {
+            "  • Dry Cleaning & Pressing Service"
+        }
+        """
+            🧾 SNOWHITE DRY CLEANERS - OFFICIAL INVOICE
+            -------------------------------------------
+            Invoice #: ${invoiceData.invoiceNumber}
+            Order #: #${invoiceData.orderId}
+            Date: ${invoiceData.invoiceDate}
+            Service Tier: ${invoiceData.serviceTier}
+            
+            CUSTOMER DETAILS:
+            Billed To: ${invoiceData.customerName}
+            Contact: ${invoiceData.customerPhone}
+            Address: ${invoiceData.deliveryAddress}
+            
+            GARMENT BREAKDOWN:
+            $itemsSummaryText
+            
+            -------------------------------------------
+            Subtotal: Rs. ${invoiceData.subtotalPKR} PKR
+            Pickup & Delivery: FREE
+            TOTAL PAYABLE: Rs. ${invoiceData.grandTotalPKR} PKR
+            Status: ${invoiceData.paymentStatus}
+            -------------------------------------------
+            SnoWhite Dry Cleaners (Pvt) Ltd.
+            Helpdesk (WhatsApp): +92 301 8637011 | Karachi, Pakistan
+        """.trimIndent()
+    }
 
     Scaffold(
         topBar = {
@@ -115,6 +150,21 @@ fun InvoiceScreen(
                 actions = {
                     IconButton(
                         onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, "Share SnoWhite Invoice")
+                            context.startActivity(shareIntent)
+                        },
+                        modifier = Modifier.testTag("invoice_screen_top_share_button")
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Share Invoice", tint = DeepBlue)
+                    }
+
+                    IconButton(
+                        onClick = {
                             val pdfFile = InvoiceGenerator.generatePdfInvoice(context, invoiceData)
                             if (pdfFile != null && pdfFile.exists()) {
                                 Toast.makeText(
@@ -133,6 +183,91 @@ fun InvoiceScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
+        },
+        bottomBar = {
+            Surface(
+                color = Color.White,
+                shadowElevation = 12.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Action Buttons Row: Share & Download PDF
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, "Share SnoWhite Invoice")
+                                context.startActivity(shareIntent)
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, DeepBlue),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .testTag("invoice_screen_bottom_share_button")
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp), tint = DeepBlue)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Share", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                        }
+
+                        Button(
+                            onClick = {
+                                val pdfFile = InvoiceGenerator.generatePdfInvoice(context, invoiceData)
+                                if (pdfFile != null && pdfFile.exists()) {
+                                    Toast.makeText(
+                                        context,
+                                        "Saved PDF: ${pdfFile.name}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    Toast.makeText(context, "Invoice PDF saved to Downloads!", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SoftLightBlue, contentColor = DeepBlue),
+                            modifier = Modifier
+                                .weight(1.2f)
+                                .height(46.dp)
+                                .testTag("invoice_screen_bottom_download_button")
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp), tint = DeepBlue)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Download PDF", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                        }
+                    }
+
+                    // Primary Action Button (Fixed at the bottom)
+                    Button(
+                        onClick = onPrimaryAction,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("invoice_screen_primary_action_button")
+                    ) {
+                        Text(
+                            text = if (isPreOrderQuote) "Proceed to Confirm Booking ➔" else "View Order History ➔",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         },
         containerColor = Color(0xFFF8FAFC)
     ) { paddingValues ->
@@ -210,17 +345,9 @@ fun InvoiceScreen(
                         verticalAlignment = Alignment.Top
                     ) {
                         Column {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data("https://snowhite.com.pk/wp-content/uploads/2021/04/snowhite-logo.png")
-                                    .allowHardware(false)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "SnoWhite Logo",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.height(38.dp)
+                            SnowhiteLogoBadge(
+                                modifier = Modifier.padding(bottom = 6.dp)
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "SnoWhite Dry Cleaners (Pvt) Ltd.",
                                 fontSize = 12.sp,
@@ -554,22 +681,7 @@ fun InvoiceScreen(
                 }
             }
 
-            // Bottom Primary Navigation Action Button
-            Button(
-                onClick = onPrimaryAction,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .testTag("invoice_screen_primary_action_button")
-            ) {
-                Text(
-                    text = if (isPreOrderQuote) "Proceed to Confirm Booking ➔" else "View Order History ➔",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

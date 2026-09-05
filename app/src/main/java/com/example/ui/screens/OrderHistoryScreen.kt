@@ -30,12 +30,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.LocalLaundryService
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Button
@@ -63,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +97,11 @@ import com.example.data.util.InvoiceGenerator
 
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.data.local.SessionManager
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -108,31 +118,53 @@ fun OrderHistoryScreen(
     onViewInvoice: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
     onReorder: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
     onFetchOrders: ((Int) -> Unit)? = null,
+    onChatWithRider: ((orderId: Int, orderCode: String, riderName: String) -> Unit)? = null,
     onBackClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val userId = SessionManager(context).getUserId()
+
+    // Cache latest non-empty remote orders so background refreshes never flash an empty state
+    var cachedRemoteOrders by remember { mutableStateOf(remoteOrders) }
+    LaunchedEffect(remoteOrders) {
+        if (remoteOrders.isNotEmpty()) {
+            cachedRemoteOrders = remoteOrders
+        }
+    }
+    val effectiveRemoteOrders = if (remoteOrders.isNotEmpty()) remoteOrders else cachedRemoteOrders
 
     var selectedRemoteOrder by remember { mutableStateOf<RemoteOrder?>(null) }
     var selectedLocalOrder by remember { mutableStateOf<OrderEntity?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    // Forceful fetch on composition and real-time status sync polling loop every 5 seconds
-    LaunchedEffect(userId) {
-        Log.d("ORDERS_DEBUG", "Fetching orders for ID: $userId")
-        if (userId > 0) {
-            if (onFetchOrders != null) {
+    // Determine if there are live in-progress orders (e.g. COLLECTING, PROCESSING, ON_THE_WAY)
+    val hasActiveOrders = remember(remoteOrders) {
+        remoteOrders.any { order ->
+            val s = order.displayStatus.uppercase()
+            !s.contains("DELIVERED") && !s.contains("CANCEL") && !s.contains("COMPLETED")
+        }
+    }
+
+    // Fetch on initial screen entry if empty, and gently sync every 30s only when active orders exist
+    LaunchedEffect(userId, hasActiveOrders) {
+        Log.d("ORDERS_DEBUG", "OrderHistoryScreen loaded for ID: $userId (hasActiveOrders=$hasActiveOrders)")
+        if (remoteOrders.isEmpty()) {
+            if (onFetchOrders != null && userId > 0) {
                 onFetchOrders(userId)
             } else {
                 onRefreshOrders()
             }
-        } else {
-            onRefreshOrders()
         }
-        while (true) {
-            kotlinx.coroutines.delay(5000L)
-            onRefreshOrders()
+        if (hasActiveOrders && userId > 0) {
+            while (true) {
+                kotlinx.coroutines.delay(30000L) // 30 seconds polite sync
+                if (onFetchOrders != null) {
+                    onFetchOrders(userId)
+                } else {
+                    onRefreshOrders()
+                }
+            }
         }
     }
 
@@ -246,7 +278,7 @@ fun OrderHistoryScreen(
             }
         }
 
-        if (isFetchingOrders && remoteOrders.isEmpty() && localOrdersList.isEmpty()) {
+        if (isFetchingOrders && effectiveRemoteOrders.isEmpty() && localOrdersList.isEmpty()) {
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -258,20 +290,38 @@ fun OrderHistoryScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Fetching live order history...", fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
-        } else if (remoteOrders.isEmpty() && localOrdersList.isEmpty()) {
+        } else if (effectiveRemoteOrders.isEmpty() && localOrdersList.isEmpty()) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.ListAlt,
-                    contentDescription = null,
-                    tint = LightBlueBorder,
-                    modifier = Modifier.size(64.dp)
+                val emptyComposition by rememberLottieComposition(
+                    LottieCompositionSpec.Url("https://assets9.lottiefiles.com/packages/lf20_tmsiddoc.json")
                 )
+                val emptyProgress by animateLottieCompositionAsState(
+                    composition = emptyComposition,
+                    iterations = LottieConstants.IterateForever
+                )
+
+                if (emptyComposition != null) {
+                    LottieAnimation(
+                        composition = emptyComposition,
+                        progress = { emptyProgress },
+                        modifier = Modifier.size(160.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ListAlt,
+                        contentDescription = null,
+                        tint = LightBlueBorder,
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("No Order History Yet", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
@@ -282,18 +332,26 @@ fun OrderHistoryScreen(
                 }
             }
         } else {
-            val remoteIds = remoteOrders.map { it.displayOrderId }.toSet()
+            val remoteIds = effectiveRemoteOrders.map { it.displayOrderId }.toSet()
             val filteredLocalOrders = localOrdersList.filter { it.orderId !in remoteIds }
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (remoteOrders.isNotEmpty()) {
-                    items(remoteOrders, key = { "remote_${it.displayOrderId}" }) { order ->
+                if (effectiveRemoteOrders.isNotEmpty()) {
+                    items(effectiveRemoteOrders, key = { "remote_${it.displayOrderId}" }) { order ->
                         val statusText = order.displayStatus
-                        val (bgColor, textColor) = getStatusColors(statusText)
-                        val isActiveTracking = !statusText.equals("DELIVERED", ignoreCase = true) && !statusText.equals("CANCELLED", ignoreCase = true)
+                        val (badgeBgColor, badgeTextColor) = getStatusColors(statusText)
+                        val isDelivered = statusText.equals("DELIVERED", ignoreCase = true)
+                        val isCancelled = statusText.equals("CANCELLED", ignoreCase = true)
+                        val isPastOrder = isDelivered || isCancelled
+                        val isActiveTracking = !isPastOrder
+
+                        val cardContainerColor = if (isPastOrder) Color(0xFFF8FAFC) else Color.White
+                        val cardBorderColor = if (isPastOrder) Color(0xFFE2E8F0) else LightBlueBorder
+                        val titleColor = if (isPastOrder) Color(0xFF475569) else DeepBlue
+                        val cardElevation = if (isPastOrder) 0.dp else 2.dp
 
                         Card(
                             modifier = Modifier
@@ -301,12 +359,12 @@ fun OrderHistoryScreen(
                                 .clickable { openRemoteSheet(order) }
                                 .testTag("history_remote_order_${order.displayOrderId}"),
                             shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            colors = CardDefaults.cardColors(containerColor = cardContainerColor),
+                            elevation = CardDefaults.cardElevation(defaultElevation = cardElevation)
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .border(1.dp, LightBlueBorder, RoundedCornerShape(18.dp))
+                                    .border(1.dp, cardBorderColor, RoundedCornerShape(18.dp))
                                     .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -319,14 +377,14 @@ fun OrderHistoryScreen(
                                         text = "Order #${order.displayOrderId}",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp,
-                                        color = DeepBlue
+                                        color = titleColor
                                     )
 
                                     TrackingStatusBadge(
                                         statusText = statusText,
                                         isActiveTracking = isActiveTracking,
-                                        bgColor = bgColor,
-                                        textColor = textColor,
+                                        bgColor = badgeBgColor,
+                                        textColor = badgeTextColor,
                                         modifier = Modifier.testTag("tracking_badge_${order.displayOrderId}")
                                     )
                                 }
@@ -354,7 +412,7 @@ fun OrderHistoryScreen(
                                         text = "Total: Rs. ${order.displayAmount} PKR",
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onBackground
+                                        color = if (isPastOrder) Color(0xFF334155) else MaterialTheme.colorScheme.onBackground
                                     )
 
                                     Row(
@@ -390,8 +448,15 @@ fun OrderHistoryScreen(
                 if (filteredLocalOrders.isNotEmpty()) {
                     items(filteredLocalOrders, key = { "local_${it.orderId}" }) { order ->
                         val statusObj = OrderStatus.values().getOrNull(order.statusStepIndex.coerceIn(0, OrderStatus.values().lastIndex)) ?: OrderStatus.COLLECTING
-                        val isActiveTracking = order.statusStepIndex < 5
+                        val isDelivered = order.statusStepIndex >= 4
+                        val isPastOrder = isDelivered
+                        val isActiveTracking = !isPastOrder
                         val displayDateStr = if (!order.date.equals("N/A", ignoreCase = true) && order.date.isNotBlank()) order.date else "Just now"
+
+                        val cardContainerColor = if (isPastOrder) Color(0xFFF8FAFC) else Color.White
+                        val cardBorderColor = if (isPastOrder) Color(0xFFE2E8F0) else LightBlueBorder
+                        val titleColor = if (isPastOrder) Color(0xFF475569) else DeepBlue
+                        val cardElevation = if (isPastOrder) 0.dp else 2.dp
 
                         Card(
                             modifier = Modifier
@@ -399,12 +464,12 @@ fun OrderHistoryScreen(
                                 .clickable { openLocalSheet(order) }
                                 .testTag("history_order_${order.orderId}"),
                             shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            colors = CardDefaults.cardColors(containerColor = cardContainerColor),
+                            elevation = CardDefaults.cardElevation(defaultElevation = cardElevation)
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .border(1.dp, LightBlueBorder, RoundedCornerShape(18.dp))
+                                    .border(1.dp, cardBorderColor, RoundedCornerShape(18.dp))
                                     .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -417,14 +482,14 @@ fun OrderHistoryScreen(
                                         text = "Order #${order.orderId}",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp,
-                                        color = DeepBlue
+                                        color = titleColor
                                     )
 
                                     TrackingStatusBadge(
                                         statusText = statusObj.title,
                                         isActiveTracking = isActiveTracking,
-                                        bgColor = if (order.statusStepIndex == 5) SuccessGreen.copy(alpha = 0.15f) else SoftLightBlue,
-                                        textColor = if (order.statusStepIndex == 5) SuccessGreen else DeepBlue,
+                                        bgColor = if (isDelivered) SuccessGreen.copy(alpha = 0.15f) else SoftLightBlue,
+                                        textColor = if (isDelivered) SuccessGreen else DeepBlue,
                                         modifier = Modifier.testTag("tracking_badge_${order.orderId}")
                                     )
                                 }
@@ -444,7 +509,7 @@ fun OrderHistoryScreen(
                                         text = "Total: Rs. ${order.totalAmountPKR} PKR",
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onBackground
+                                        color = if (isPastOrder) Color(0xFF334155) else MaterialTheme.colorScheme.onBackground
                                     )
 
                                     Row(
@@ -516,6 +581,10 @@ fun OrderHistoryScreen(
                     closeSheet()
                     onReorder?.invoke(remote, local)
                 },
+                onChatWithRider = { orderId, orderCode, riderName ->
+                    closeSheet()
+                    onChatWithRider?.invoke(orderId, orderCode, riderName)
+                },
                 onClose = { closeSheet() }
             )
         }
@@ -530,6 +599,7 @@ private fun OrderDetailsBottomSheetContent(
     onTrackOrder: (String) -> Unit,
     onViewInvoice: (RemoteOrder?, OrderEntity?) -> Unit,
     onReorder: (RemoteOrder?, OrderEntity?) -> Unit,
+    onChatWithRider: ((Int, String, String) -> Unit)? = null,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -687,22 +757,42 @@ private fun OrderDetailsBottomSheetContent(
                     }
 
                     if (cleanPhone.isNotBlank()) {
-                        Button(
-                            onClick = {
-                                val whatsappUrl = "https://wa.me/92$cleanPhone"
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
-                                try {
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {
-                                    Toast.makeText(context, "Opening WhatsApp for +92 $cleanPhone", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                            modifier = Modifier.testTag("whatsapp_captain_button")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("WhatsApp", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Button(
+                                onClick = {
+                                    val numId = orderId.filter { it.isDigit() }.toIntOrNull() ?: 1
+                                    onChatWithRider?.invoke(numId, orderId, realRiderName)
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                                modifier = Modifier.testTag("chat_captain_from_sheet_button")
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Chat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    val whatsappUrl = "https://wa.me/92$cleanPhone"
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, "Opening WhatsApp for +92 $cleanPhone", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.testTag("whatsapp_captain_button")
+                            ) {
+                                Text("WhatsApp", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -900,7 +990,10 @@ private fun OrderDetailsBottomSheetContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { onViewInvoice(remoteOrder, localOrder) },
+                    onClick = {
+                        onClose()
+                        onViewInvoice(remoteOrder, localOrder)
+                    },
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SoftLightBlue, contentColor = DeepBlue),
                     modifier = Modifier
@@ -981,7 +1074,10 @@ private fun OrderDetailsBottomSheetContent(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedButton(
-                    onClick = { onReorder(remoteOrder, localOrder) },
+                    onClick = {
+                        onClose()
+                        onReorder(remoteOrder, localOrder)
+                    },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .weight(1f)
@@ -998,7 +1094,10 @@ private fun OrderDetailsBottomSheetContent(
                 }
 
                 Button(
-                    onClick = { onTrackOrder(orderId) },
+                    onClick = {
+                        onClose()
+                        onTrackOrder(orderId)
+                    },
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
                     modifier = Modifier
@@ -1025,7 +1124,8 @@ fun TrackingStatusBadge(
     isActiveTracking: Boolean,
     bgColor: Color,
     textColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "status_badge_pulse")
     val alphaAnim by infiniteTransition.animateFloat(
@@ -1047,6 +1147,8 @@ fun TrackingStatusBadge(
         label = "scale"
     )
 
+    val resolvedIcon: ImageVector = icon ?: getStatusIcon(statusText)
+
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(50))
@@ -1057,13 +1159,13 @@ fun TrackingStatusBadge(
     ) {
         if (isActiveTracking) {
             Box(
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(14.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Outer pulsing halo ring
                 Box(
                     modifier = Modifier
-                        .size(11.dp)
+                        .size(13.dp)
                         .graphicsLayer {
                             scaleX = scaleAnim
                             scaleY = scaleAnim
@@ -1072,17 +1174,18 @@ fun TrackingStatusBadge(
                         .clip(CircleShape)
                         .background(textColor)
                 )
-                // Inner active spinning indicator
-                CircularProgressIndicator(
-                    color = textColor,
-                    strokeWidth = 1.6.dp,
-                    modifier = Modifier.size(9.dp)
+                // Status-specific icon
+                Icon(
+                    imageVector = resolvedIcon,
+                    contentDescription = statusText,
+                    tint = textColor,
+                    modifier = Modifier.size(12.dp)
                 )
             }
         } else {
             Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = "Delivered",
+                imageVector = resolvedIcon,
+                contentDescription = statusText,
                 tint = textColor,
                 modifier = Modifier.size(12.dp)
             )
@@ -1097,12 +1200,24 @@ fun TrackingStatusBadge(
     }
 }
 
+fun getStatusIcon(status: String): ImageVector {
+    return when (status.uppercase()) {
+        "COLLECTING", "ORDER PLACED", "RECEIVED_AT_HUB" -> Icons.Default.Inventory2
+        "IN_WASHING", "IN CLEANING & PRESSING", "WASHING", "CLEANING" -> Icons.Default.LocalLaundryService
+        "OUT_FOR_DELIVERY", "SHIPPED", "DELIVERY" -> Icons.Default.LocalShipping
+        "DELIVERED", "COMPLETED" -> Icons.Default.CheckCircle
+        "CANCELLED", "CANCELED" -> Icons.Default.Cancel
+        else -> Icons.Default.Inventory2
+    }
+}
+
 private fun getStatusColors(status: String): Pair<Color, Color> {
     return when (status.uppercase()) {
         "COLLECTING", "ORDER PLACED" -> Pair(SoftLightBlue, DeepBlue)
         "IN_WASHING", "IN CLEANING & PRESSING" -> Pair(Color(0xFFEDE7F6), Color(0xFF512DA8))
         "OUT_FOR_DELIVERY" -> Pair(Color(0xFFFFF3E0), Color(0xFFE65100))
         "DELIVERED" -> Pair(SuccessGreen.copy(alpha = 0.15f), SuccessGreen)
+        "CANCELLED" -> Pair(Color(0xFFFFEBEE), Color(0xFFC62828))
         else -> Pair(SoftLightBlue, DeepBlue)
     }
 }
@@ -1118,6 +1233,7 @@ fun OrdersScreen(
     onViewInvoice: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
     onReorder: ((RemoteOrder?, OrderEntity?) -> Unit)? = null,
     onFetchOrders: ((Int) -> Unit)? = null,
+    onChatWithRider: ((orderId: Int, orderCode: String, riderName: String) -> Unit)? = null,
     onBackClick: () -> Unit = {}
 ) {
     OrderHistoryScreen(
@@ -1130,6 +1246,7 @@ fun OrdersScreen(
         onViewInvoice = onViewInvoice,
         onReorder = onReorder,
         onFetchOrders = onFetchOrders,
+        onChatWithRider = onChatWithRider,
         onBackClick = onBackClick
     )
 }

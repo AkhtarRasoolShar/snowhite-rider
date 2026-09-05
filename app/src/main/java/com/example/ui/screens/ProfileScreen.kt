@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
@@ -76,7 +76,9 @@ fun ProfileScreen(
     userName: String,
     userPhone: String,
     savedAddress: String,
+    savedDeliveryAddress: String = "",
     onSaveAddress: (String) -> Unit,
+    onSaveDeliveryAddress: (String) -> Unit = {},
     onOpenMapPicker: () -> Unit,
     onOpenNotificationSettings: () -> Unit = {},
     onWhatsAppSupportClick: () -> Unit = {},
@@ -84,11 +86,18 @@ fun ProfileScreen(
     onBackClick: () -> Unit
 ) {
     var addressInput by remember { mutableStateOf(savedAddress) }
+    var deliveryAddressInput by remember { mutableStateOf(savedDeliveryAddress) }
     var isSavedMessageVisible by remember { mutableStateOf(false) }
+    var isDeliverySavedMessageVisible by remember { mutableStateOf(false) }
     var isMapPickerVisible by remember { mutableStateOf(false) }
+    var pickingFor by remember { mutableStateOf("pickup") } // "pickup" or "delivery"
 
     LaunchedEffect(savedAddress) {
         addressInput = savedAddress
+    }
+    
+    LaunchedEffect(savedDeliveryAddress) {
+        deliveryAddressInput = savedDeliveryAddress
     }
 
     Scaffold(
@@ -104,7 +113,7 @@ fun ProfileScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 actions = {
@@ -211,6 +220,119 @@ fun ProfileScreen(
                 }
             }
 
+            // Default Pickup Address Section
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = DeepBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Default Pickup Address",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(SoftLightBlue)
+                                .clickable { 
+                                    pickingFor = "pickup"
+                                    isMapPickerVisible = true 
+                                }
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Map, contentDescription = null, tint = DeepBlue, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Pick Map Pin", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DeepBlue)
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "This address will automatically fill during checkout for quick pickup.",
+                        fontSize = 11.sp,
+                        color = Color(0xFF64748B)
+                    )
+
+                    OutlinedTextField(
+                        value = addressInput,
+                        onValueChange = {
+                            addressInput = it
+                            isSavedMessageVisible = false
+                        },
+                        label = { Text("Pickup House / Appt / Street in Karachi") },
+                        leadingIcon = { Icon(Icons.Default.Home, contentDescription = null, tint = DeepBlue) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = DeepBlue,
+                            unfocusedBorderColor = LightBlueBorder,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("profile_default_pickup_address_input")
+                    )
+
+                    if (isSavedMessageVisible) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Pickup address saved successfully!",
+                                color = SuccessGreen,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            onSaveAddress(addressInput.trim())
+                            isSavedMessageVisible = true
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("profile_save_pickup_address_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("Save Pickup Address", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+
             // Default Delivery Address Section
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -248,7 +370,10 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
                                 .background(SoftLightBlue)
-                                .clickable { isMapPickerVisible = true }
+                                .clickable { 
+                                    pickingFor = "delivery"
+                                    isMapPickerVisible = true 
+                                }
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -260,18 +385,18 @@ fun ProfileScreen(
                     }
 
                     Text(
-                        text = "This address will automatically fill during checkout for quick single-tap order placement.",
+                        text = "This address will automatically fill during checkout for delivery.",
                         fontSize = 11.sp,
                         color = Color(0xFF64748B)
                     )
 
                     OutlinedTextField(
-                        value = addressInput,
+                        value = deliveryAddressInput,
                         onValueChange = {
-                            addressInput = it
-                            isSavedMessageVisible = false
+                            deliveryAddressInput = it
+                            isDeliverySavedMessageVisible = false
                         },
-                        label = { Text("House / Apartment / Street Address in Karachi") },
+                        label = { Text("Delivery House / Appt / Street in Karachi") },
                         leadingIcon = { Icon(Icons.Default.Home, contentDescription = null, tint = DeepBlue) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = DeepBlue,
@@ -282,15 +407,15 @@ fun ProfileScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("profile_default_address_input")
+                            .testTag("profile_default_delivery_address_input")
                     )
 
-                    if (isSavedMessageVisible) {
+                    if (isDeliverySavedMessageVisible) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Default address saved successfully!",
+                                text = "Delivery address saved successfully!",
                                 color = SuccessGreen,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
@@ -300,22 +425,22 @@ fun ProfileScreen(
 
                     Button(
                         onClick = {
-                            onSaveAddress(addressInput.trim())
-                            isSavedMessageVisible = true
+                            onSaveDeliveryAddress(deliveryAddressInput.trim())
+                            isDeliverySavedMessageVisible = true
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
-                            .testTag("profile_save_address_button")
+                            .testTag("profile_save_delivery_address_button")
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text("Save Default Address", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Save Delivery Address", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }
@@ -444,12 +569,18 @@ fun ProfileScreen(
         if (isMapPickerVisible) {
             GoogleMapAddressPickerModal(
                 initialArea = "DHA Phase 6, Karachi",
-                initialStreetAddress = addressInput,
+                initialStreetAddress = if (pickingFor == "pickup") addressInput else deliveryAddressInput,
                 onLocationConfirmed = { area, street ->
                     val full = if (street.contains(area)) street else "$street, $area"
-                    addressInput = full
-                    onSaveAddress(full)
-                    isSavedMessageVisible = true
+                    if (pickingFor == "pickup") {
+                        addressInput = full
+                        onSaveAddress(full)
+                        isSavedMessageVisible = true
+                    } else {
+                        deliveryAddressInput = full
+                        onSaveDeliveryAddress(full)
+                        isDeliverySavedMessageVisible = true
+                    }
                     isMapPickerVisible = false
                 },
                 onDismiss = { isMapPickerVisible = false }

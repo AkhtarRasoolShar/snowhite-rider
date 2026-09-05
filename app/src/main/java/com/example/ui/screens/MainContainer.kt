@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.LocalLaundryService
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.TrackChanges
@@ -163,6 +163,23 @@ fun MainContainer(
             }
         }
 
+        is Screen.OrderChat -> {
+            Box(modifier = Modifier.fillMaxSize()) {
+                OrderChatScreen(
+                    orderId = screen.orderId,
+                    mySenderType = screen.mySenderType,
+                    mySenderId = uiState.currentCustomerId,
+                    orderCode = screen.orderCode,
+                    otherPartyName = screen.otherPartyName,
+                    onBackClick = { viewModel.navigateTo(Screen.OrderHistory) }
+                )
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+
         else -> {
             ModalNavigationDrawer(
                 drawerState = drawerState,
@@ -290,7 +307,7 @@ fun MainContainer(
                             NavigationBarItem(
                                 selected = currentScreen is Screen.OrderHistory,
                                 onClick = { viewModel.navigateToOrdersTab() },
-                                icon = { Icon(Icons.Default.ListAlt, contentDescription = "Orders") },
+                                icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Orders") },
                                 label = { Text("Orders", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = DeepBlue,
@@ -370,6 +387,9 @@ fun MainContainer(
                             is Screen.LiveOrderTracking -> LiveOrderTrackingScreen(
                                 order = uiState.currentActiveOrder,
                                 remoteOrder = uiState.remoteOrders.find { it.displayOrderId == currentScreen.orderId } ?: uiState.remoteOrders.firstOrNull(),
+                                onChatWithRiderClick = { id, code, rider ->
+                                    viewModel.openOrderChat(id, code, rider)
+                                },
                                 onBackToHomeClick = { viewModel.navigateTo(Screen.Home) }
                             )
 
@@ -401,8 +421,8 @@ fun MainContainer(
                                 remoteOrders = uiState.remoteOrders,
                                 localOrdersList = uiState.pastOrdersList,
                                 isFetchingOrders = uiState.isFetchingOrders,
-                                onRefreshOrders = { viewModel.fetchCustomerOrders() },
-                                onFetchOrders = { id -> viewModel.fetchOrders(id) },
+                                onRefreshOrders = { viewModel.fetchCustomerOrders(isSilent = false) },
+                                onFetchOrders = { id -> viewModel.fetchOrders(id, isSilent = true) },
                                 onSelectOrder = { orderId ->
                                     viewModel.navigateTo(Screen.LiveOrderTracking(orderId))
                                 },
@@ -412,6 +432,9 @@ fun MainContainer(
                                 },
                                 onReorder = { remote, local ->
                                     viewModel.reorderOrder(remote, local)
+                                },
+                                onChatWithRider = { id, code, rider ->
+                                    viewModel.openOrderChat(id, code, rider)
                                 },
                                 onBackClick = { viewModel.navigateTo(Screen.Home) }
                             )
@@ -428,7 +451,9 @@ fun MainContainer(
                                 userName = uiState.userProfileName,
                                 userPhone = uiState.userProfilePhone,
                                 savedAddress = uiState.userAddress,
+                                savedDeliveryAddress = uiState.userDeliveryAddress,
                                 onSaveAddress = { viewModel.saveUserAddress(it) },
+                                onSaveDeliveryAddress = { viewModel.saveUserDeliveryAddress(it) },
                                 onOpenMapPicker = { viewModel.navigateTo(Screen.MapPicker) },
                                 onOpenNotificationSettings = { viewModel.navigateTo(Screen.NotificationSettings) },
                                 onWhatsAppSupportClick = { launchWhatsAppSupport() },

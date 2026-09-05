@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 fun LiveOrderTrackingScreen(
     order: OrderEntity? = null,
     remoteOrder: RemoteOrder? = null,
+    onChatWithRiderClick: ((orderId: Int, orderCode: String, riderName: String) -> Unit)? = null,
     onBackToHomeClick: () -> Unit
 ) {
     if (order == null && remoteOrder == null) {
@@ -247,30 +249,50 @@ fun LiveOrderTrackingScreen(
                         }
                     }
 
-                    // WhatsApp Contact Button
-                    val cleanPhone = (riderPhone ?: "")
-                        .removePrefix("+92")
-                        .removePrefix("92")
-                        .removePrefix("0")
-                        .replace(" ", "")
-                        .trim()
-
-                    Button(
-                        onClick = {
-                            val whatsappUrl = "https://wa.me/92$cleanPhone"
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
-                            try {
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "Opening WhatsApp for +92 $cleanPhone", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        modifier = Modifier.testTag("whatsapp_captain_button")
+                    // Chat and WhatsApp Contact Buttons
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("WhatsApp", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = {
+                                val numId = displayOrderId.filter { it.isDigit() }.toIntOrNull() ?: 1
+                                onChatWithRiderClick?.invoke(numId, displayOrderId, riderName)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("chat_captain_live_button")
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Live Chat", modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Chat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        val cleanPhone = (riderPhone ?: "")
+                            .removePrefix("+92")
+                            .removePrefix("92")
+                            .removePrefix("0")
+                            .replace(" ", "")
+                            .trim()
+
+                        Button(
+                            onClick = {
+                                val whatsappUrl = "https://wa.me/92$cleanPhone"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "Opening WhatsApp for +92 $cleanPhone", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("whatsapp_captain_button")
+                        ) {
+                            Text("WhatsApp", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

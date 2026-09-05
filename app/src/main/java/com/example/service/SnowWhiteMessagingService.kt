@@ -49,6 +49,7 @@ class SnowWhiteMessagingService : FirebaseMessagingService() {
         }
     }
 
+    @Suppress("DEPRECATION")
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d(TAG, "Refreshed FCM registration token: $token")

@@ -22,7 +22,7 @@ import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.LocalLaundryService
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -218,7 +218,7 @@ fun DrawerMenuContent(
                 )
 
                 DrawerMenuItem(
-                    icon = Icons.Default.ListAlt,
+                    icon = Icons.AutoMirrored.Filled.ListAlt,
                     label = "My Order History",
                     isSelected = currentRoute == "history",
                     onClick = {

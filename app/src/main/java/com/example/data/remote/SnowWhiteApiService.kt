@@ -3,6 +3,8 @@ package com.example.data.remote
 import com.example.data.model.ApiResponse
 import com.example.data.model.AuthResponse
 import com.example.data.model.Category
+import com.example.data.model.ChatMessage
+import com.example.data.model.ChatMessagesResponse
 import com.example.data.model.CreateOrderRequest
 import com.example.data.model.CreateOrderResponse
 import com.example.data.model.EmailInvoiceRequest
@@ -11,6 +13,7 @@ import com.example.data.model.GetOrdersResponse
 import com.example.data.model.LoginRequest
 import com.example.data.model.Product
 import com.example.data.model.RegisterRequest
+import com.example.data.model.SendChatMessageRequest
 import com.example.data.model.ServiceItem
 import retrofit2.Response
 import retrofit2.http.Body
@@ -63,4 +66,16 @@ interface SnowWhiteApiService {
 
     @GET("routes.php?action=get_products&is_app=true")
     suspend fun getActiveProducts(): Response<ApiResponse<List<Product>>>
+
+    @GET("routes.php")
+    suspend fun getChatMessages(
+        @Query("action") action: String = "get_chat_messages",
+        @Query("order_id") orderId: Int
+    ): Response<ChatMessagesResponse>
+
+    @POST("routes.php")
+    suspend fun sendChatMessage(
+        @Query("action") action: String = "send_chat_message",
+        @Body request: SendChatMessageRequest
+    ): Response<ApiResponse<ChatMessage>>
 }
