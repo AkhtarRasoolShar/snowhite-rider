@@ -66,6 +66,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.example.R
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+
+import androidx.compose.material.icons.filled.LocalLaundryService
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.GradientAccentBlue
 import com.example.ui.theme.LightBlueBorder
@@ -76,6 +86,8 @@ private val BrightBlue = Color(0xFF0088FF)
 
 @Composable
 fun SplashScreen(
+    appName: String = "SnowWhite",
+    logoUrl: String? = null,
     onSplashFinished: () -> Unit
 ) {
     LaunchedEffect(Unit) {
@@ -106,17 +118,23 @@ fun SplashScreen(
                     .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.AcUnit,
-                    contentDescription = "SnoWhite Logo",
-                    tint = DeepBlue,
-                    modifier = Modifier.size(52.dp)
+val customFallbackUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSDAJkXtsNkzYsDhu_BhNUwLD82d47UMkHFx2JCjoZFw&s"
+                val targetLogoUrl = logoUrl?.takeIf { it.isNotBlank() } ?: customFallbackUrl
+
+                coil.compose.AsyncImage(
+                    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        .data(targetLogoUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "App Logo",
+                    modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.White),
+                    contentScale = ContentScale.Fit
                 )
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "SnoWhite",
+                    text = appName.ifBlank { "Welcome" },
                     fontSize = 32.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White
@@ -143,9 +161,12 @@ fun SplashScreen(
 
 @Composable
 fun LoginScreen(
+    appName: String = "SnowWhite",
+    logoUrl: String? = null,
     isLoading: Boolean,
     onLoginClick: (phone: String, pass: String) -> Unit,
     onNavigateToSignUp: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
     onBackClick: () -> Unit = {}
 ) {
     var phone by remember { mutableStateOf("") }
@@ -241,18 +262,24 @@ fun LoginScreen(
                                 .background(Color.White.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.AcUnit,
-                                contentDescription = "SnoWhite Snowflake Logo",
-                                tint = Color.White,
-                                modifier = Modifier.size(38.dp)
+val customFallbackUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSDAJkXtsNkzYsDhu_BhNUwLD82d47UMkHFx2JCjoZFw&s"
+                            val targetLogoUrl = logoUrl?.takeIf { it.isNotBlank() } ?: customFallbackUrl
+
+                            coil.compose.AsyncImage(
+                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(targetLogoUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "App Logo",
+                                modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.White),
+                                contentScale = ContentScale.Fit
                             )
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "SnoWhite Dry Cleaners",
+                            text = appName.ifBlank { "Welcome" },
                             fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
@@ -379,6 +406,19 @@ fun LoginScreen(
                                     modifier = Modifier.padding(start = 4.dp)
                                 )
                             }
+                        }
+
+                        // Forgot Password Text
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                            Text(
+                                text = "Forgot Password?",
+                                fontSize = 12.sp,
+                                color = BrightBlue,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .clickable { onNavigateToForgotPassword() }
+                                    .padding(vertical = 8.dp)
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(4.dp))
@@ -511,6 +551,8 @@ fun LoginScreen(
 
 @Composable
 fun SignUpScreen(
+    appName: String = "SnowWhite",
+    logoUrl: String? = null,
     isLoading: Boolean,
     onSignUpClick: (name: String, phone: String, pass: String) -> Unit,
     onNavigateToLogin: () -> Unit,
@@ -616,16 +658,22 @@ fun SignUpScreen(
                             .background(Color.White.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AcUnit,
-                            contentDescription = "SnoWhite Logo",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
+val customFallbackUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSDAJkXtsNkzYsDhu_BhNUwLD82d47UMkHFx2JCjoZFw&s"
+                        val targetLogoUrl = logoUrl?.takeIf { it.isNotBlank() } ?: customFallbackUrl
+
+                        coil.compose.AsyncImage(
+                            model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(targetLogoUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "App Logo",
+                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.White),
+                            contentScale = ContentScale.Fit
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "SnoWhite Dry Cleaners",
+                        text = appName.ifBlank { "Welcome" },
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White

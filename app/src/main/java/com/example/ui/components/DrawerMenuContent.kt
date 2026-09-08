@@ -48,6 +48,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import com.example.R
+
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.GradientAccentBlue
 import com.example.ui.theme.LightBlueBorder
@@ -56,6 +62,9 @@ import com.example.ui.theme.SoftLightBlue
 @Composable
 fun DrawerMenuContent(
     currentRoute: String,
+    appName: String = "SnowWhite",
+    whatsappNumber: String = "",
+    logoUrl: String? = null,
     isLoggedIn: Boolean = true,
     userName: String? = null,
     userPhone: String? = null,
@@ -103,24 +112,22 @@ fun DrawerMenuContent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(Color.White),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AcUnit,
-                                contentDescription = null,
-                                tint = DeepBlue,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
+                        val customFallbackUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSDAJkXtsNkzYsDhu_BhNUwLD82d47UMkHFx2JCjoZFw&s"
+                        val targetLogoUrl = logoUrl?.takeIf { it.isNotBlank() } ?: customFallbackUrl
+
+                        coil.compose.AsyncImage(
+                            model = coil.request.ImageRequest.Builder(LocalContext.current)
+                                .data(targetLogoUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Drawer Logo",
+                            modifier = Modifier.size(64.dp).clip(CircleShape).background(Color.White).padding(8.dp),
+                            contentScale = ContentScale.Fit
+                        )
                         Column {
                             Text(
-                                text = "SnoWhite",
-                                fontSize = 18.sp,
+                                text = appName,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White
                             )
@@ -254,7 +261,7 @@ fun DrawerMenuContent(
 
                 DrawerMenuItem(
                     icon = Icons.Default.Call,
-                    label = "WhatsApp Support (+92 301 8637011)",
+                    label = if (whatsappNumber.isNotBlank()) "WhatsApp Support ($whatsappNumber)" else "WhatsApp Support",
                     isSelected = false,
                     onClick = {
                         onNavigateSupportWhatsApp()
@@ -297,7 +304,7 @@ fun DrawerMenuContent(
                     .padding(horizontal = 16.dp)
             ) {
                 Text(
-                    text = "Snowhite DRYCLEANERS v7.0 • Karachi",
+                    text = "$appName v7.0",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

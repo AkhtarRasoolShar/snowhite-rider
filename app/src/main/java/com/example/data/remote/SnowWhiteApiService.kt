@@ -22,6 +22,20 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface SnowWhiteApiService {
+
+    @POST("routes.php?action=forgot_password_request")
+    suspend fun forgotPasswordRequest(
+        @Body request: Map<String, String>
+    ): Response<com.example.data.model.ApiResponse<Any>>
+
+    @POST("routes.php?action=reset_password_with_otp")
+    suspend fun resetPasswordWithOtp(
+        @Body request: Map<String, String>
+    ): Response<AuthResponse>
+
+    @GET("routes.php?action=get_settings")
+    suspend fun getAppSettings(): Response<ApiResponse<Map<String, String>>>
+
     @POST("routes.php")
     suspend fun login(
         @Query("action") action: String = "login",
@@ -58,6 +72,9 @@ interface SnowWhiteApiService {
         @Query("action") action: String = "get_services"
     ): Response<ApiResponse<List<ServiceItem>>>
 
+    @GET("routes.php?action=get_banners")
+    suspend fun getBanners(): Response<ApiResponse<List<com.example.data.model.Banner>>>
+
     @GET("routes.php?action=get_categories")
     suspend fun getCategories(): Response<ApiResponse<List<Category>>>
 
@@ -72,6 +89,12 @@ interface SnowWhiteApiService {
         @Query("action") action: String = "get_chat_messages",
         @Query("order_id") orderId: Int
     ): Response<ChatMessagesResponse>
+
+    @POST("routes.php")
+    suspend fun markMessagesAsRead(
+        @Query("action") action: String = "mark_chat_read",
+        @Body request: Map<String, Int> // pass order_id
+    ): Response<AuthResponse>
 
     @POST("routes.php")
     suspend fun sendChatMessage(

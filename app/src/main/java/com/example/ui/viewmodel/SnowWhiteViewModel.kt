@@ -36,6 +36,7 @@ sealed class Screen {
     object Splash : Screen()
     object Login : Screen()
     object SignUp : Screen()
+    object ForgotPassword : Screen()
     object Home : Screen()
     object ServiceTierSelect : Screen()
     object ItemSelection : Screen()
@@ -59,6 +60,8 @@ sealed class Screen {
 
 data class UiState(
     val currentScreen: Screen = Screen.Splash,
+    val appSettings: com.example.data.model.AppSettings = com.example.data.model.AppSettings(),
+    val appBanners: List<com.example.data.model.Banner> = emptyList(),
     val postLoginTargetScreen: Screen? = null,
     val isLoggedIn: Boolean = false,
     val currentCustomerId: Int = 1,
@@ -106,7 +109,39 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    fun fetchSettings() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getAppSettings()
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    val data = body?.data
+                    if (data != null) {
+                        val newSettings = com.example.data.model.AppSettings(
+                            app_name = data["app_name"] ?: "SnowWhite",
+                            whatsapp_number = data["whatsapp_number"] ?: "",
+                            support_email = data["support_email"] ?: "",
+                            delivery_fee = data["delivery_fee"] ?: "0",
+                            currency = data["currency"] ?: "PKR",
+                            logo_url = data["logo_url"]
+                        )
+                        _uiState.update { it.copy(appSettings = newSettings) }
+                        val bannersResponse = RetrofitClient.apiService.getBanners()
+                        if (bannersResponse.isSuccessful) {
+                            val bannersData = bannersResponse.body()?.data ?: emptyList()
+                            _uiState.update { it.copy(appBanners = bannersData) }
+                        }
+
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SETTINGS_DEBUG", "Failed to fetch settings: ${e.message}")
+            }
+        }
+    }
+
     init {
+        fetchSettings()
         val loggedIn = sessionManager.isLoggedIn()
         val userId = sessionManager.getUserId()
         val userName = sessionManager.getUserName()
@@ -148,7 +183,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
         // Fetch customer live orders, dynamic services & categories/products on startup (COLD START FIX)
         fetchServices()
-        fetchCategoriesAndProducts()
+        // fetchCategoriesAndProducts() handled by MainContainer
 
         if (userId > 0) {
             fetchOrdersForLoggedInUser(userId)
@@ -512,6 +547,30 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+
+    fun handleAuthSuccess(body: com.example.data.model.AuthResponse) {
+        val userId = body.extractUserId() ?: 101
+        val userName = body.extractUserName() ?: "Akhtar Hussain"
+        val userPhone = body.extractUserPhone() ?: "Unknown"
+
+        sessionManager.saveUser(userId, userName, userPhone)
+
+        val targetScreen = _uiState.value.postLoginTargetScreen ?: Screen.Home
+
+        _uiState.update {
+            it.copy(
+                isLoggedIn = true,
+                currentCustomerId = userId,
+                userProfileName = userName,
+                userProfilePhone = userPhone,
+                isAuthLoading = false,
+                currentScreen = targetScreen,
+                postLoginTargetScreen = null,
+                snackbarMessage = body.message ?: "Welcome back!"
+            )
+        }
+    }
+
     fun loginUser(phone: String, pass: String) {
         val cleanPhone = phone.trim()
         val cleanPass = pass.trim()
@@ -725,6 +784,21 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
     // Fetch customer live orders using GET routes.php?action=get_customer_orders&customer_id={id}&user_id={id}
     
+    fun markMessagesAsRead(orderId: Int) {
+        viewModelScope.launch {
+            try {
+                RetrofitClient.apiService.markMessagesAsRead(
+                    action = "mark_chat_read",
+                    request = mapOf("order_id" to orderId)
+                )
+                // Optionally re-fetch messages after marking them as read
+                // fetchMessages(orderId) 
+            } catch (e: Exception) {
+                Log.e("CHAT_DEBUG", "Failed to mark messages as read: ${e.message}")
+            }
+        }
+    }
+
     fun fetchMessages(orderId: Int) {
         viewModelScope.launch {
             try {
@@ -752,7 +826,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
     fun fetchOrders(customerId: Int = _uiState.value.currentCustomerId, isSilent: Boolean = false) {
         val targetId = if (customerId > 0) customerId else sessionManager.getUserId()
         if (targetId <= 0) {
-            Log.w("ORDERS_DEBUG", "fetchOrders aborted: invalid customerId=$targetId")
+            // User not logged in, silent return
             return
         }
 
@@ -817,7 +891,9 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun fetchCustomerOrders(isSilent: Boolean = false) {
         val targetId = if (_uiState.value.currentCustomerId > 0) _uiState.value.currentCustomerId else sessionManager.getUserId()
-        fetchOrders(targetId, isSilent = isSilent)
+        if (targetId > 0) {
+            fetchOrders(targetId, isSilent = isSilent)
+        }
     }
 
     // Submit Order function connected to POST /api/routes.php?action=create_laundry_order

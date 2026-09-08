@@ -27,7 +27,8 @@ data class GarmentItem(
 data class Category(
     @SerializedName("id") val id: Int? = null,
     @SerializedName("name") val name: String? = null,
-    @SerializedName("type") val type: String? = null
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("is_active") val is_active: Int? = null
 )
 
 data class Product(
@@ -35,6 +36,7 @@ data class Product(
     @SerializedName("category_id") val category_id: Int? = null,
     @SerializedName("name") val name: String? = null,
     @SerializedName("description") val description: String? = null,
+    @SerializedName("category_name") val category_name: String? = null,
     @SerializedName("price") val rawPrice: Any? = null,
     @SerializedName("image_url") val image_url: String? = null
 ) {
@@ -294,7 +296,19 @@ data class ServiceItem(
     @SerializedName("base_fare") val base_fare: String? = null,
     @SerializedName("per_km_rate") val per_km_rate: String? = null,
     @SerializedName("price") val price: Double? = null,
-    @SerializedName("category") val category: String? = null
+    @SerializedName("category") val category: String? = null,
+    @SerializedName("service_code") val service_code: String? = null,
+    @SerializedName("is_active") val is_active: Int? = null,
+    @SerializedName("pricing_type") val pricing_type: String? = null
+)
+
+data class AppSettings(
+    val app_name: String? = "SnowWhite",
+    val whatsapp_number: String? = "",
+    val support_email: String? = "",
+    val delivery_fee: String? = "0",
+    val currency: String? = "PKR",
+    val logo_url: String? = null
 )
 
 data class ApiResponse<T>(
@@ -351,3 +365,11 @@ data class ChatMessagesResponse(
     @SerializedName("messages") val messages: List<ChatMessage>? = null
 )
 
+
+
+data class Banner(
+    val id: Int? = null,
+    val title: String? = null,
+    val image_url: String? = null,
+    val is_active: Int? = 1
+)

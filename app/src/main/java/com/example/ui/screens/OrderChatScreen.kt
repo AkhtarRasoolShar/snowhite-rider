@@ -244,6 +244,8 @@ fun OrderChatScreen(
 
     // Polling effect every 3 seconds to fetch new messages in real-time
     LaunchedEffect(orderId) {
+        // Mark as read immediately when opened
+        viewModel.markMessagesAsRead(orderId)
         while(true) {
             viewModel.fetchMessages(orderId)
             kotlinx.coroutines.delay(3000) // Poll every 3 seconds

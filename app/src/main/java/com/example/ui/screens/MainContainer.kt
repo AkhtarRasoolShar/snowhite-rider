@@ -129,6 +129,8 @@ fun MainContainer(
         Screen.Splash -> {
             Box(modifier = Modifier.fillMaxSize()) {
                 SplashScreen(
+                    appName = uiState.appSettings.app_name ?: "SnowWhite",
+                    logoUrl = uiState.appSettings.logo_url,
                     onSplashFinished = { viewModel.handleSplashFinished() }
                 )
                 SnackbarHost(
@@ -141,9 +143,11 @@ fun MainContainer(
         Screen.Login -> {
             Box(modifier = Modifier.fillMaxSize()) {
                 LoginScreen(
+                    logoUrl = uiState.appSettings.logo_url,
                     isLoading = uiState.isAuthLoading,
                     onLoginClick = { phone, pass -> viewModel.loginUser(phone, pass) },
                     onNavigateToSignUp = { viewModel.navigateTo(Screen.SignUp) },
+                    onNavigateToForgotPassword = { viewModel.navigateTo(Screen.ForgotPassword) },
                     onBackClick = { viewModel.navigateTo(Screen.Home) }
                 )
                 SnackbarHost(
@@ -153,9 +157,22 @@ fun MainContainer(
             }
         }
 
+
+        Screen.ForgotPassword -> {
+            Box(modifier = Modifier.fillMaxSize()) {
+                ForgotPasswordScreen(
+                    onNavigateToLogin = { viewModel.navigateTo(Screen.Login) },
+                    onNavigateToDashboard = { authResponse ->
+                        viewModel.handleAuthSuccess(authResponse)
+                    }
+                )
+            }
+        }
+
         Screen.SignUp -> {
             Box(modifier = Modifier.fillMaxSize()) {
                 SignUpScreen(
+                    logoUrl = uiState.appSettings.logo_url,
                     isLoading = uiState.isAuthLoading,
                     onSignUpClick = { name, phone, pass -> viewModel.registerUser(name, phone, pass) },
                     onNavigateToLogin = { viewModel.navigateTo(Screen.Login) },
@@ -192,6 +209,9 @@ fun MainContainer(
                 drawerState = drawerState,
                 drawerContent = {
                     DrawerMenuContent(
+                        appName = uiState.appSettings.app_name ?: "SnowWhite",
+                        whatsappNumber = uiState.appSettings.whatsapp_number ?: "",
+                        logoUrl = uiState.appSettings.logo_url,
                         currentRoute = when (uiState.currentScreen) {
                             Screen.Home -> "home"
                             Screen.ServiceTierSelect, Screen.ItemSelection, Screen.PickupScheduling -> "book"
@@ -232,6 +252,8 @@ fun MainContainer(
                     containerColor = Color(0xFFF7F9FC),
                     topBar = {
                         TopAppBarHeader(
+                            appName = uiState.appSettings.app_name ?: "SnowWhite",
+                            logoUrl = uiState.appSettings.logo_url,
                             onOpenDrawer = {
                                 scope.launch { drawerState.open() }
                             },
@@ -334,7 +356,10 @@ fun MainContainer(
                     ) {
                         when (val currentScreen = uiState.currentScreen) {
                             Screen.Home -> HomeScreen(
+                                appName = uiState.appSettings.app_name ?: "SnowWhite",
+                                appBanners = uiState.appBanners,
                                 activeOrder = uiState.currentActiveOrder,
+                                services = uiState.servicesList,
                                 categories = uiState.categories,
                                 products = uiState.products,
                                 selectedCategoryId = uiState.selectedCategoryId,
@@ -401,6 +426,7 @@ fun MainContainer(
                             )
 
                             Screen.ProductsShop -> ProductsShopScreen(
+                                retailProducts = uiState.products.filter { it.category_name?.toString()?.contains("Premium") == true || it.category_name?.toString()?.contains("Product") == true },
                                 getProductQuantity = { viewModel.getProductQuantity(it) },
                                 onAddProduct = { viewModel.addProductToCart(it) },
                                 onRemoveProduct = { viewModel.removeProductFromCart(it) },

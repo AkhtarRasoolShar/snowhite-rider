@@ -18,6 +18,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import com.example.data.model.Banner
+import androidx.compose.ui.draw.clip
+import coil.compose.AsyncImage
+
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,7 +55,13 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +77,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.example.data.local.OrderEntity
 import com.example.data.model.Category
 import com.example.data.model.Product
+import com.example.data.model.ServiceItem
 import com.example.ui.components.DualServiceGrid
 import com.example.ui.components.HeroPromoBanner
 import com.example.ui.components.SocialProofRatingCard
@@ -76,7 +89,10 @@ import com.example.ui.theme.SoftLightBlue
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    appName: String = "SnowWhite",
+    appBanners: List<Banner> = emptyList(),
     activeOrder: OrderEntity?,
+    services: List<ServiceItem> = emptyList(),
     categories: List<Category>,
     products: List<Product>,
     selectedCategoryId: Int?,
@@ -95,9 +111,14 @@ fun HomeScreen(
     onTrackActiveOrderClick: () -> Unit,
     onProceedToSchedule: () -> Unit
 ) {
-    val filteredProducts = products.filter { product ->
+    var selectedService by remember { mutableStateOf("Dry Cleaning") }
+    val servicesList = listOf("Dry Cleaning", "Wash & Fold", "Steam Ironing")
+
+    val baseFilteredProducts = products.filter { product ->
         selectedCategoryId == null || product.category_id == selectedCategoryId
     }
+    
+    val filteredProducts = baseFilteredProducts
 
     LaunchedEffect(Unit) {
         onRefresh()
@@ -196,27 +217,81 @@ fun HomeScreen(
                 }
             }
 
-            // Hero Promo Banner
+// Hero Promo Banner or Dynamic Slider
             item {
-                HeroPromoBanner(
-                    onBookNowClick = onBookNowClick
-                )
+                if (appBanners.isNotEmpty()) {
+                    val pagerState = rememberPagerState(pageCount = { appBanners.size })
+                    
+                    LaunchedEffect(pagerState.currentPage) {
+                        delay(3000)
+                        var newPosition = pagerState.currentPage + 1
+                        if (newPosition > appBanners.size - 1) newPosition = 0
+                        pagerState.animateScrollToPage(newPosition)
+                    }
+                    
+                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxWidth().height(200.dp).padding(top = 8.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            pageSpacing = 8.dp
+                        ) { page ->
+                            val banner = appBanners[page]
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                AsyncImage(
+                                    model = banner.image_url,
+                                    contentDescription = banner.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                        
+                        // Dots Indicator
+                        Row(
+                            Modifier
+                                .height(24.dp)
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            repeat(appBanners.size) { iteration ->
+                                val color = if (pagerState.currentPage == iteration) androidx.compose.ui.graphics.Color.DarkGray else androidx.compose.ui.graphics.Color.LightGray
+                                Box(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .size(if (pagerState.currentPage == iteration) 8.dp else 6.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    HeroPromoBanner(
+                        appName = appName,
+                        onBookNowClick = onBookNowClick
+                    )
+                }
             }
 
-            // "Get Started" Dual Service Grid (Laundry/Dry Cleaning & Products)
+
+
+            // Dynamic Services Grid
             item {
                 DualServiceGrid(
+                    services = services,
+                    retailCategories = categories.filter { it.type == "retail" },
                     onLaundryClick = onLaundryClick,
                     onProductsClick = onProductsClick
                 )
             }
 
-            // Social Proof / Rating Card
-            item {
-                SocialProofRatingCard(
-                    onReviewsClick = onReviewsClick
-                )
-            }
+            
 
             // Categories Section Title
             item {
@@ -243,18 +318,19 @@ fun HomeScreen(
             if (categories.isNotEmpty()) {
                 item {
                     val selectedIndex = categories.indexOfFirst { it.id == selectedCategoryId }.let { if (it < 0) 0 else it }
+                    val primaryBrandColor = Color(0xFF00B4D8)
 
                     ScrollableTabRow(
                         selectedTabIndex = selectedIndex,
                         containerColor = Color.White,
-                        contentColor = DeepBlue,
+                        contentColor = primaryBrandColor,
                         edgePadding = 16.dp,
                         indicator = { tabPositions ->
                             if (selectedIndex in tabPositions.indices) {
                                 TabRowDefaults.SecondaryIndicator(
                                     Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
                                     height = 3.dp,
-                                    color = DeepBlue
+                                    color = primaryBrandColor
                                 )
                             }
                         },
@@ -269,12 +345,43 @@ fun HomeScreen(
                                     Text(
                                         text = category.name ?: "Category",
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) DeepBlue else Color(0xFF64748B),
+                                        color = if (isSelected) primaryBrandColor else Color(0xFF64748B),
                                         fontSize = 14.sp,
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 }
                             )
+                        }
+                    }
+                }
+                
+                // Sub-Categories (Services)
+                item {
+                    val primaryBrandColor = Color(0xFF00B4D8)
+                    
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(servicesList) { service ->
+                            val isSelected = selectedService == service
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(if (isSelected) primaryBrandColor else Color(0xFFF1F5F9))
+                                    .clickable { selectedService = service }
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = service,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else Color(0xFF64748B)
+                                )
+                            }
                         }
                     }
                 }
@@ -303,206 +410,61 @@ fun HomeScreen(
                         ProductCardItem(
                             product = product,
                             quantity = qty,
+                            selectedService = selectedService,
                             onAdd = { onAddProduct(product) },
                             onRemove = { onRemoveProduct(product) }
                         )
                     }
                 }
             }
-
-            // Specialty Garment Care Bento Section
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "Specialty Garment Care",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
-                    )
-                    Text(
-                        text = "Handcrafted organic cleaning for delicate fabrics",
-                        fontSize = 11.sp,
-                        color = Color(0xFF64748B),
-                        modifier = Modifier.padding(bottom = 10.dp, top = 2.dp)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        BentoCategoryTile(
-                            modifier = Modifier.weight(1f),
-                            title = "Suits & Formals",
-                            tag = "Press & Polish",
-                            icon = Icons.Default.Style,
-                            onClick = onLaundryClick
-                        )
-                        BentoCategoryTile(
-                            modifier = Modifier.weight(1f),
-                            title = "Eastern Wear",
-                            tag = "Shalwar Kameez",
-                            icon = Icons.Default.DryCleaning,
-                            onClick = onLaundryClick
-                        )
-                    }
-                }
-            }
-
-            // Why Choose SnoWhite Feature Cards
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Why SnoWhite Pakistan?",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        FeatureHighlightCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Speed,
-                            title = "Express 8Hr",
-                            subtitle = "Same-day doorstep pickup"
-                        )
-
-                        FeatureHighlightCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Shield,
-                            title = "German Solvents",
-                            subtitle = "Eco fabric preservation"
-                        )
-                    }
-                }
-            }
         }
     }
-
-        // Sticky Bottom "View Cart / Schedule Pickup" Bar
-        if (totalCartCount > 0) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                color = Color.White,
-                shadowElevation = 12.dp,
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "$totalCartCount Items Selected",
-                            fontSize = 11.sp,
-                            color = Color(0xFF64748B)
-                        )
-                        Text(
-                            text = "Rs. $totalCartPricePKR",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = DeepBlue
-                        )
-                    }
-
-                    Button(
-                        onClick = onProceedToSchedule,
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepBlue),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "View Cart / Schedule Pickup",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
+}
 }
 
 @Composable
 private fun ProductCardItem(
     product: Product,
     quantity: Int,
+    selectedService: String,
     onAdd: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val primaryBrandColor = Color(0xFF00B4D8)
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("product_card_${product.id}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Row(
             modifier = Modifier
-                .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(16.dp))
                 .padding(14.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Product Image or Fallback Icon Box
-            Box(
+            val defaultImg = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSDAJkXtsNkzYsDhu_BhNUwLD82d47UMkHFx2JCjoZFw&s"
+            val imgUrl = if (product.image_url.isNullOrBlank()) defaultImg else product.image_url
+
+            coil.compose.AsyncImage(
+                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(imgUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = product.name,
                 modifier = Modifier
-                    .size(54.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SoftLightBlue),
-                contentAlignment = Alignment.Center
-            ) {
-                if (!product.image_url.isNullOrBlank()) {
-                    AsyncImage(
-                        model = product.image_url,
-                        contentDescription = product.name ?: "Product Image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Checkroom,
-                        contentDescription = "Product Icon",
-                        tint = Color(0xFF00B4D8),
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(14.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = product.name ?: "Product",
@@ -512,7 +474,6 @@ private fun ProductCardItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 if (!product.description.isNullOrBlank()) {
                     Text(
                         text = product.description,
@@ -523,27 +484,30 @@ private fun ProductCardItem(
                         lineHeight = 16.sp
                     )
                 }
-
-                Spacer(modifier = Modifier.height(2.dp))
+                val priceMultiplier = when (selectedService) {
+                    "Wash & Fold" -> 0.6
+                    "Steam Ironing" -> 0.4
+                    else -> 1.0
+                }
+                val adjustedPrice = product.price * priceMultiplier
 
                 Text(
-                    text = "Rs. ${product.price.toInt()} PKR",
+                    text = "Rs. ${adjustedPrice.toInt()} PKR",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = DeepBlue
+                    color = primaryBrandColor
                 )
             }
-
             Spacer(modifier = Modifier.width(12.dp))
-
-            // +/- Quantity Selector
+            
+            // +/- Quantity Selector with Brand Colors
             if (quantity > 0) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
                         .clip(RoundedCornerShape(24.dp))
-                        .background(SoftLightBlue)
+                        .background(primaryBrandColor.copy(alpha = 0.1f))
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     IconButton(
@@ -553,19 +517,17 @@ private fun ProductCardItem(
                         Icon(
                             imageVector = Icons.Default.Remove,
                             contentDescription = "Remove",
-                            tint = DeepBlue,
+                            tint = primaryBrandColor,
                             modifier = Modifier.size(16.dp)
                         )
                     }
-
                     Text(
                         text = "$quantity",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = DeepBlue,
-                        modifier = Modifier.padding(horizontal = 6.dp)
+                        color = primaryBrandColor,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
-
                     IconButton(
                         onClick = onAdd,
                         modifier = Modifier.size(30.dp)
@@ -573,7 +535,7 @@ private fun ProductCardItem(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add",
-                            tint = DeepBlue,
+                            tint = primaryBrandColor,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -581,7 +543,7 @@ private fun ProductCardItem(
             } else {
                 Button(
                     onClick = onAdd,
-                    colors = ButtonDefaults.buttonColors(containerColor = SoftLightBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryBrandColor.copy(alpha = 0.1f)),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                     modifier = Modifier.height(36.dp)
@@ -593,14 +555,14 @@ private fun ProductCardItem(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add",
-                            tint = DeepBlue,
+                            tint = primaryBrandColor,
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = "ADD",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = DeepBlue
+                            color = primaryBrandColor
                         )
                     }
                 }

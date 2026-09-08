@@ -41,7 +41,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.CareProduct
+import com.example.data.model.Product
 import com.example.data.repository.CatalogData
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.LightBlueBorder
@@ -53,9 +53,9 @@ import androidx.compose.material3.IconButton
 
 @Composable
 fun ProductsShopScreen(
-    getProductQuantity: (String) -> Int,
-    onAddProduct: (CareProduct) -> Unit,
-    onRemoveProduct: (CareProduct) -> Unit,
+    getProductQuantity: (Int?) -> Int,
+    onAddProduct: (Product) -> Unit, retailProducts: List<Product>,
+    onRemoveProduct: (Product) -> Unit,
     totalCartCount: Int,
     totalCartPricePKR: Int,
     onViewCartClick: () -> Unit,
@@ -108,7 +108,7 @@ fun ProductsShopScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(CatalogData.careProducts, key = { it.id }) { product ->
+            items(retailProducts, key = { it.id ?: 0 }) { product ->
                 val quantity = getProductQuantity(product.id)
 
                 Card(
@@ -144,7 +144,7 @@ fun ProductsShopScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ShoppingBag,
-                                    contentDescription = product.name,
+                                    contentDescription = product.name.orEmpty(),
                                     tint = DeepBlue,
                                     modifier = Modifier.size(28.dp)
                                 )
@@ -154,7 +154,7 @@ fun ProductsShopScreen(
 
                             Column {
                                 Text(
-                                    text = product.name,
+                                    text = product.name.orEmpty(),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onBackground
@@ -171,7 +171,7 @@ fun ProductsShopScreen(
                                         modifier = Modifier.size(13.dp)
                                     )
                                     Text(
-                                        text = "${product.rating} • ${product.volumeOrQty}",
+                                        text = "",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -180,14 +180,14 @@ fun ProductsShopScreen(
                                 }
 
                                 Text(
-                                    text = product.description,
+                                    text = product.description.orEmpty(),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 2
                                 )
 
                                 Text(
-                                    text = "Rs. ${product.pricePKR} PKR",
+                                    text = "Rs. ${product.price.toInt()} PKR",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Black,
                                     color = DeepBlue,

@@ -36,6 +36,7 @@ import com.example.ui.theme.GradientAccentBlue
 
 @Composable
 fun HeroPromoBanner(
+    appName: String = "SnowWhite",
     onBookNowClick: () -> Unit
 ) {
     Card(
@@ -79,7 +80,7 @@ fun HeroPromoBanner(
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = "SNOWHITE DRYCLEANERS • SINCE 1949",
+                        text = "${appName.uppercase()} • SINCE 1949",
                         color = Color.White,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,

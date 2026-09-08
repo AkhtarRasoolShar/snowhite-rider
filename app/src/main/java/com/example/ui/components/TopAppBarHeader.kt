@@ -33,6 +33,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import androidx.compose.material.icons.filled.LocalLaundryService
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.SoftLightBlue
 
@@ -41,6 +43,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 @Composable
 fun TopAppBarHeader(
     onOpenDrawer: () -> Unit,
+    appName: String = "SnowWhite",
+    logoUrl: String? = null,
     onOpenCart: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenProfile: () -> Unit,
@@ -82,11 +86,28 @@ fun TopAppBarHeader(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
+                    if (!logoUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = logoUrl,
+                            contentDescription = "App Logo",
+                            modifier = Modifier.size(32.dp).clip(CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.LocalLaundryService,
+                            contentDescription = "App Logo",
+                            tint = DeepBlue,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
                     Text(
-                        text = "SnoWhite",
+                        text = appName.ifBlank { "Laundry App" },
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF03045E),
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B),
                         modifier = Modifier.testTag("app_title_text")
                     )
                 }
