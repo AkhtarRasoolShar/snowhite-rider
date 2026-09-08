@@ -1,4 +1,7 @@
 package com.example.ui.viewmodel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.LocalLaundryService
 
 import android.app.Application
 import android.util.Log
@@ -50,6 +53,7 @@ sealed class Screen {
     object Profile : Screen()
     object MapPicker : Screen()
     object NotificationSettings : Screen()
+    object NotificationsList : Screen()
     data class OrderChat(
         val orderId: Int,
         val orderCode: String = "SW-$orderId",
@@ -58,6 +62,15 @@ sealed class Screen {
     ) : Screen()
 }
 
+
+data class NotificationItemModel(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val title: String,
+    val message: String,
+    val time: String,
+    val isUnread: Boolean,
+    val isPromo: Boolean = false
+)
 data class UiState(
     val currentScreen: Screen = Screen.Splash,
     val appSettings: com.example.data.model.AppSettings = com.example.data.model.AppSettings(),
@@ -67,6 +80,10 @@ data class UiState(
     val currentCustomerId: Int = 1,
     val userProfileName: String = "Akhtar Hussain",
     val userProfilePhone: String = "+92 301 1234567",
+    val userProfileEmail: String = "",
+    val isProfileOtpDialogVisible: Boolean = false,
+    val profileUpdatePhone: String = "",
+    val profileUpdateEmail: String = "",
     val userAddress: String = "",
     val userDeliveryAddress: String = "",
     val servicesList: List<com.example.data.model.ServiceItem> = emptyList(),
@@ -91,6 +108,8 @@ data class UiState(
     val isReviewsDialogOpen: Boolean = false,
     val isCartSheetOpen: Boolean = false,
     val notificationCount: Int = 3,
+    val activePromos: List<com.example.data.model.Promo> = emptyList(),
+    val notifications: List<NotificationItemModel> = emptyList(),
     val searchQuery: String = "",
     val snackbarMessage: String? = null,
     val activeInvoiceData: InvoiceData? = null,
@@ -646,11 +665,12 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun registerUser(name: String, phone: String, pass: String) {
+    fun registerUser(name: String, phone: String, email: String, pass: String) {
         val cleanName = name.trim()
         val cleanPhone = phone.trim()
+        val cleanEmail = email.trim()
         val cleanPass = pass.trim()
-        if (cleanName.isBlank() || cleanPhone.isBlank() || cleanPass.isBlank()) {
+        if (cleanName.isBlank() || cleanPhone.isBlank() || cleanEmail.isBlank() || cleanPass.isBlank()) {
             _uiState.update { it.copy(snackbarMessage = "Please fill in all registration fields.") }
             return
         }
@@ -659,7 +679,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
 
         viewModelScope.launch {
             try {
-                val req = mapOf("name" to cleanName, "phone" to cleanPhone, "password" to cleanPass)
+                val req = mapOf("name" to cleanName, "phone" to cleanPhone, "email" to cleanEmail, "password" to cleanPass)
                 val response = RetrofitClient.apiService.register("register", req)
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -864,6 +884,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                             )
                         }
                     }
+                    generateNotifications()
                 } else {
                     Log.w("ORDERS_DEBUG", "fetchOrders unsuccessful or non-success status: code=${response.code()}, status=${body?.status}, message=${body?.message}")
                     // CRITICAL: Preserve existing remoteOrders state on unsuccessful response to prevent list from disappearing
@@ -1271,4 +1292,136 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         )
         _uiState.update { it.copy(snackbarMessage = "Test push alert dispatched to device!") }
     }
+
+    fun updateProfileParams(newPhone: String, newEmail: String) {
+        val currentPhone = _uiState.value.userProfilePhone
+        val currentEmail = _uiState.value.userProfileEmail
+        
+        if (newPhone == currentPhone && newEmail == currentEmail) {
+            _uiState.update { it.copy(snackbarMessage = "No changes to save.") }
+            return
+        }
+        
+        _uiState.update { it.copy(
+            isAuthLoading = true,
+            profileUpdatePhone = newPhone,
+            profileUpdateEmail = newEmail
+        ) }
+        
+        viewModelScope.launch {
+            try {
+                val req = mapOf(
+                    "customer_id" to _uiState.value.currentCustomerId.toString(),
+                    "phone" to newPhone,
+                    "email" to newEmail
+                )
+                val response = RetrofitClient.apiService.requestProfileUpdateOtp(req)
+                if (response.isSuccessful) {
+                    _uiState.update { it.copy(
+                        isAuthLoading = false,
+                        isProfileOtpDialogVisible = true,
+                        snackbarMessage = "OTP sent to your email/phone."
+                    ) }
+                } else {
+                    _uiState.update { it.copy(isAuthLoading = false, snackbarMessage = "Failed to send OTP.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isAuthLoading = false, snackbarMessage = "Network error: ${e.message}") }
+            }
+        }
+    }
+
+    fun verifyProfileOtp(otp: String) {
+        if (otp.isBlank()) return
+        
+        _uiState.update { it.copy(isAuthLoading = true) }
+        
+        viewModelScope.launch {
+            try {
+                val req = mapOf(
+                    "customer_id" to _uiState.value.currentCustomerId.toString(),
+                    "otp" to otp,
+                    "phone" to _uiState.value.profileUpdatePhone,
+                    "email" to _uiState.value.profileUpdateEmail
+                )
+                val response = RetrofitClient.apiService.verifyAndUpdateProfile(req)
+                if (response.isSuccessful) {
+                    val newPhone = _uiState.value.profileUpdatePhone
+                    val newEmail = _uiState.value.profileUpdateEmail
+                    val newName = _uiState.value.userProfileName
+                    
+                    sessionManager.saveUserSession(_uiState.value.currentCustomerId, newName, newPhone, newEmail)
+                    
+                    _uiState.update { it.copy(
+                        isAuthLoading = false,
+                        isProfileOtpDialogVisible = false,
+                        userProfilePhone = newPhone,
+                        userProfileEmail = newEmail,
+                        snackbarMessage = "Profile updated successfully!"
+                    ) }
+                } else {
+                    _uiState.update { it.copy(isAuthLoading = false, snackbarMessage = "Invalid OTP.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isAuthLoading = false, snackbarMessage = "Network error: ${e.message}") }
+            }
+        }
+    }
+
+    fun dismissProfileOtpDialog() {
+        _uiState.update { it.copy(isProfileOtpDialogVisible = false) }
+    }
+
+
+    fun fetchPromos() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getPromos()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val promos = response.body()?.promos ?: emptyList()
+                    _uiState.update { it.copy(activePromos = promos) }
+                    generateNotifications()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun generateNotifications() {
+        val state = _uiState.value
+        val notifications = mutableListOf<NotificationItemModel>()
+        
+        // Add promos (up to 2)
+        state.activePromos.take(2).forEach { promo ->
+            notifications.add(
+                NotificationItemModel(
+                    icon = androidx.compose.material.icons.Icons.Default.LocalOffer,
+                    title = "Flash Sale!",
+                    message = "Use code ${promo.code} for ${promo.discountPercent}% off! ${promo.description ?: ""}",
+                    time = "Just now",
+                    isUnread = false,
+                    isPromo = true
+                )
+            )
+        }
+        
+        // Add recent orders (up to 5)
+        state.remoteOrders.sortedByDescending { it.order_id ?: it.id ?: "" }.take(5).forEach { order ->
+            val displayId = order.order_id ?: order.orderId ?: order.id ?: "Unknown"
+            notifications.add(
+                NotificationItemModel(
+                    icon = androidx.compose.material.icons.Icons.Default.LocalLaundryService,
+                    title = "SnowWhite Order Update",
+                    message = "Order #${displayId} status updated to: ${(order.status ?: "Processing").replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }}",
+                    time = order.date ?: "Recently",
+                    isUnread = true,
+                    isPromo = false
+                )
+            )
+        }
+        
+        _uiState.update { it.copy(notifications = notifications, notificationCount = notifications.count { n -> n.isUnread }) }
+    }
+
 }

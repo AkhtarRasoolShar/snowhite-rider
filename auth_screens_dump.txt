@@ -552,7 +552,7 @@ val customFallbackUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR
 }
 
 @Composable
-fun RegisterScreen(
+fun SignUpScreen(
     appName: String = "SnowWhite",
     logoUrl: String? = null,
     isLoading: Boolean,
@@ -977,4 +977,17 @@ val customFallbackUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR
     }
 }
 
-
+@Composable
+fun RegisterScreen(
+    isLoading: Boolean,
+    onRegisterClick: (name: String, phone: String, email: String, pass: String) -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onBackClick: () -> Unit = {}
+) {
+    SignUpScreen(
+        isLoading = isLoading,
+        onSignUpClick = onRegisterClick,
+        onNavigateToLogin = onNavigateToLogin,
+        onBackClick = onBackClick
+    )
+}

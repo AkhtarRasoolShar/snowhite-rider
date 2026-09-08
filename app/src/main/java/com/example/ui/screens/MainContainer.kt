@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -171,10 +172,10 @@ fun MainContainer(
 
         Screen.SignUp -> {
             Box(modifier = Modifier.fillMaxSize()) {
-                SignUpScreen(
+                RegisterScreen(
                     logoUrl = uiState.appSettings.logo_url,
                     isLoading = uiState.isAuthLoading,
-                    onSignUpClick = { name, phone, pass -> viewModel.registerUser(name, phone, pass) },
+                    onSignUpClick = { name, phone, email, pass -> viewModel.registerUser(name, phone, email, pass) },
                     onNavigateToLogin = { viewModel.navigateTo(Screen.Login) },
                     onBackClick = { viewModel.navigateTo(Screen.Home) }
                 )
@@ -236,7 +237,7 @@ fun MainContainer(
                         onNavigateHistory = { viewModel.navigateTo(Screen.OrderHistory) },
                         onNavigatePriceList = { viewModel.navigateTo(Screen.PriceList) },
                         onNavigateProfile = { viewModel.navigateTo(Screen.Profile) },
-                        onNavigateNotificationSettings = { viewModel.navigateTo(Screen.NotificationSettings) },
+                        onNavigateNotificationSettings = { viewModel.navigateTo(Screen.NotificationsList) },
                         onNavigateSupportWhatsApp = { launchWhatsAppSupport() },
                         onLoginClick = { viewModel.navigateTo(Screen.Login) },
                         onLogout = { viewModel.logoutUser() },
@@ -261,7 +262,7 @@ fun MainContainer(
                                 viewModel.navigateTo(Screen.CartCheckout)
                             },
                             onOpenNotifications = {
-                                viewModel.navigateTo(Screen.NotificationSettings)
+                                viewModel.navigateTo(Screen.NotificationsList)
                             },
                             onOpenProfile = {
                                 viewModel.navigateTo(Screen.Profile)
@@ -480,18 +481,29 @@ fun MainContainer(
                                 onBookNowClick = { viewModel.navigateTo(Screen.ServiceTierSelect) }
                             )
 
-                            Screen.Profile -> ProfileScreen(
-                                userName = uiState.userProfileName,
-                                userPhone = uiState.userProfilePhone,
-                                savedAddress = uiState.userAddress,
-                                savedDeliveryAddress = uiState.userDeliveryAddress,
-                                onSaveAddress = { viewModel.saveUserAddress(it) },
-                                onSaveDeliveryAddress = { viewModel.saveUserDeliveryAddress(it) },
-                                onOpenMapPicker = { viewModel.navigateTo(Screen.MapPicker) },
-                                onOpenNotificationSettings = { viewModel.navigateTo(Screen.NotificationSettings) },
-                                onWhatsAppSupportClick = { launchWhatsAppSupport() },
-                                onLogoutClick = { viewModel.logoutUser() },
-                                onBackClick = { viewModel.navigateTo(Screen.Home) }
+                            
+                            Screen.NotificationsList -> {
+                                LaunchedEffect(Unit) {
+                                    viewModel.fetchCustomerOrders(isSilent = true)
+                                    viewModel.fetchPromos()
+                                }
+                                NotificationsListScreen(
+                                    notifications = uiState.notifications,
+                                    onBackClick = { viewModel.navigateTo(Screen.Home) }
+                                )
+                            }
+
+                            Screen.Profile -> CustomerProfileScreen(
+                                name = uiState.userProfileName,
+                                phone = uiState.userProfilePhone,
+                                email = uiState.userProfileEmail,
+                                onBackClick = { viewModel.navigateTo(Screen.Home) },
+                                onUpdateProfile = { newPhone, newEmail -> 
+                                    viewModel.updateProfileParams(newPhone, newEmail) 
+                                },
+                                onResetPassword = {
+                                    viewModel.navigateTo(Screen.ForgotPassword)
+                                }
                             )
 
                             Screen.NotificationSettings -> NotificationSettingsScreen(
@@ -543,4 +555,28 @@ fun MainContainer(
             }
         }
     }
-}
+    if (uiState.isProfileOtpDialogVisible) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { viewModel.dismissProfileOtpDialog() },
+                title = { androidx.compose.material3.Text("Enter OTP") },
+                text = {
+                    var otpValue by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+                    androidx.compose.foundation.layout.Column {
+                        androidx.compose.material3.Text("Please enter the OTP sent to your new email/phone.")
+                        androidx.compose.material3.OutlinedTextField(
+                            value = otpValue,
+                            onValueChange = { otpValue = it },
+                            label = { androidx.compose.material3.Text("OTP") }
+                        )
+                        androidx.compose.material3.Button(
+                            onClick = { viewModel.verifyProfileOtp(otpValue) },
+                            modifier = androidx.compose.ui.Modifier.padding(top = 16.dp)
+                        ) {
+                            androidx.compose.material3.Text("Verify")
+                        }
+                    }
+                },
+                confirmButton = {}
+            )
+        }
+    }

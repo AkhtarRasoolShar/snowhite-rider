@@ -17,6 +17,7 @@ class SessionManager(context: Context) {
         private const val KEY_NAME = "name"
         private const val KEY_CUSTOMER_NAME = "customer_name"
         private const val KEY_PHONE = "phone"
+        private const val KEY_EMAIL = "email"
         private const val KEY_CUSTOMER_PHONE = "customer_phone"
         private const val KEY_CUSTOMER_ADDRESS = "customer_address"
         private const val KEY_DELIVERY_ADDRESS = "delivery_address"
@@ -76,7 +77,7 @@ class SessionManager(context: Context) {
         } catch (_: Exception) {}
     }
 
-    fun saveUser(id: Int, name: String, phone: String) {
+    fun saveUser(id: Int, name: String, phone: String, email: String = "") {
         try {
             prefs?.edit()
                 ?.putBoolean(KEY_IS_LOGGED_IN, true)
@@ -86,12 +87,23 @@ class SessionManager(context: Context) {
                 ?.putString(KEY_CUSTOMER_NAME, name)
                 ?.putString(KEY_PHONE, phone)
                 ?.putString(KEY_CUSTOMER_PHONE, phone)
+                ?.putString(KEY_EMAIL, email)
                 ?.apply()
         } catch (_: Exception) {}
     }
 
-    fun saveUserSession(id: Int, name: String, phone: String) {
-        saveUser(id, name, phone)
+    fun saveUserSession(id: Int, name: String, phone: String, email: String = "") {
+        saveUser(id, name, phone, email)
+    }
+    
+    fun getUserEmail(): String? {
+        return try {
+            if (isLoggedIn()) {
+                prefs?.getString(KEY_EMAIL, "")
+            } else null
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun saveAddress(address: String) {

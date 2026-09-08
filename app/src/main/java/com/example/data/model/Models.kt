@@ -373,3 +373,15 @@ data class Banner(
     val image_url: String? = null,
     val is_active: Int? = 1
 )
+data class Promo(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("code") val code: String? = null,
+    @SerializedName("discount_percent") val discountPercent: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("is_active") val isActive: Int? = null
+)
+
+data class GetPromosResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("promos") val promos: List<Promo>? = null
+)

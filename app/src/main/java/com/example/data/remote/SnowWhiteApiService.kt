@@ -22,6 +22,16 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface SnowWhiteApiService {
+    @GET("routes.php?action=get_promos")
+    suspend fun getPromos(): retrofit2.Response<com.example.data.model.GetPromosResponse>
+
+
+    @POST("api/routes.php?action=request_profile_update_otp")
+    suspend fun requestProfileUpdateOtp(@Body request: Map<String, String>): retrofit2.Response<com.example.data.model.ApiResponse<Any>>
+
+    @POST("api/routes.php?action=verify_and_update_profile")
+    suspend fun verifyAndUpdateProfile(@Body request: Map<String, String>): retrofit2.Response<com.example.data.model.ApiResponse<Any>>
+
 
     @POST("routes.php?action=forgot_password_request")
     suspend fun forgotPasswordRequest(
