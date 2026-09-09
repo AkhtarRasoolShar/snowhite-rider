@@ -109,6 +109,8 @@ data class UiState(
     val isCartSheetOpen: Boolean = false,
     val notificationCount: Int = 3,
     val activePromos: List<com.example.data.model.Promo> = emptyList(),
+    val availableHubs: List<com.example.data.model.Hub> = emptyList(),
+    val selectedHub: com.example.data.model.Hub? = null,
     val notifications: List<NotificationItemModel> = emptyList(),
     val searchQuery: String = "",
     val snackbarMessage: String? = null,
@@ -922,6 +924,11 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         val state = _uiState.value
         if (state.cartItems.isEmpty()) return
 
+        if (state.selectedHub == null) {
+            _uiState.update { it.copy(snackbarMessage = "Please select a hub before checkout.") }
+            return
+        }
+
         _uiState.update { it.copy(isSubmittingOrder = true) }
 
         viewModelScope.launch {
@@ -945,6 +952,7 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
                 delivery_address = state.userDeliveryAddress.ifBlank { "${state.pickupSchedule.streetAddress}, ${state.pickupSchedule.area}" },
                 pickup_time_slot = "${state.pickupSchedule.date} ${state.pickupSchedule.timeSlot}",
                 service_tier = state.selectedServiceTier.title,
+                hub_name = state.selectedHub?.name,
                 total_amount = totalCartPricePKR,
                 items = orderItemsPayload
             )
@@ -1422,6 +1430,25 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         }
         
         _uiState.update { it.copy(notifications = notifications, notificationCount = notifications.count { n -> n.isUnread }) }
+    }
+
+
+    fun selectHub(hub: com.example.data.model.Hub) {
+        _uiState.update { it.copy(selectedHub = hub) }
+    }
+
+    fun fetchHubs() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getHubs()
+                if (response.isSuccessful) {
+                    val hubs = response.body()?.data ?: response.body()?.hubs ?: emptyList()
+                    _uiState.update { it.copy(availableHubs = hubs) }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
 }

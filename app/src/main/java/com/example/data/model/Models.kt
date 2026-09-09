@@ -122,6 +122,7 @@ data class CreateOrderRequest(
     @SerializedName("delivery_address") val delivery_address: String? = null,
     @SerializedName("pickup_time_slot") val pickup_time_slot: String? = null,
     @SerializedName("service_tier") val service_tier: String? = null,
+    @SerializedName("hub_name") val hub_name: String? = null,
     @SerializedName("total_amount") val total_amount: Int? = null,
     @SerializedName("items") val items: List<OrderItemRequest>? = null
 )
@@ -148,6 +149,7 @@ data class RemoteOrder(
     @SerializedName("created_at") val createdAt: String? = null,
     @SerializedName("order_date") val orderDate: String? = null,
     @SerializedName("service_tier") val service_tier: String? = null,
+    @SerializedName("hub_name") val hub_name: String? = null,
     @SerializedName("pickup_address") val pickup_address: String? = null,
     @SerializedName("delivery_address") val delivery_address: String? = null,
     @SerializedName("total_amount") val total_amount: String? = null,
@@ -384,4 +386,19 @@ data class Promo(
 data class GetPromosResponse(
     @SerializedName("success") val success: Boolean,
     @SerializedName("promos") val promos: List<Promo>? = null
+)
+
+
+data class Hub(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("city") val city: String? = null,
+    @SerializedName("is_active") val isActive: Int? = null
+)
+
+data class GetHubsResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("data") val data: List<Hub>? = null,
+    @SerializedName("hubs") val hubs: List<Hub>? = null
 )

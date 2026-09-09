@@ -405,17 +405,25 @@ fun MainContainer(
                                 onBackClick = { viewModel.navigateTo(Screen.ServiceTierSelect) }
                             )
 
-                            Screen.PickupScheduling -> PickupSchedulingScreen(
-                                pickupSchedule = uiState.pickupSchedule,
-                                onScheduleUpdated = { area, addr, date, slot, notes ->
-                                    viewModel.updatePickupSchedule(area, addr, date, slot, notes)
-                                },
-                                totalCartCount = viewModel.totalCartBadgeCount,
-                                totalPricePKR = viewModel.totalCartPricePKR,
-                                isSubmitting = uiState.isSubmittingOrder,
-                                onConfirmOrderClick = { viewModel.createAndSubmitOrder() },
-                                onBackClick = { viewModel.navigateTo(Screen.CartCheckout) }
-                            )
+                            Screen.PickupScheduling -> {
+                                LaunchedEffect(Unit) {
+                                    viewModel.fetchHubs()
+                                }
+                                PickupSchedulingScreen(
+                                    pickupSchedule = uiState.pickupSchedule,
+                                    availableHubs = uiState.availableHubs,
+                                    selectedHub = uiState.selectedHub,
+                                    onHubSelected = { viewModel.selectHub(it) },
+                                    onScheduleUpdated = { area, addr, date, slot, notes ->
+                                        viewModel.updatePickupSchedule(area, addr, date, slot, notes)
+                                    },
+                                    totalCartCount = viewModel.totalCartBadgeCount,
+                                    totalPricePKR = viewModel.totalCartPricePKR,
+                                    isSubmitting = uiState.isSubmittingOrder,
+                                    onConfirmOrderClick = { viewModel.createAndSubmitOrder() },
+                                    onBackClick = { viewModel.navigateTo(Screen.CartCheckout) }
+                                )
+                            }
 
                             is Screen.LiveOrderTracking -> LiveOrderTrackingScreen(
                                 order = uiState.currentActiveOrder,

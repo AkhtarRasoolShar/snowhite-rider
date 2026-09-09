@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.PickupSchedule
+import com.example.data.model.Hub
 import com.example.data.repository.CatalogData
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.LightBlueBorder
@@ -70,6 +71,9 @@ import androidx.compose.material3.IconButton
 @Composable
 fun PickupSchedulingScreen(
     pickupSchedule: PickupSchedule,
+    availableHubs: List<Hub>,
+    selectedHub: Hub?,
+    onHubSelected: (Hub) -> Unit,
     onScheduleUpdated: (String?, String?, String?, String?, String?) -> Unit,
     totalCartCount: Int,
     totalPricePKR: Int,
@@ -291,7 +295,7 @@ fun PickupSchedulingScreen(
                     }
                 }
 
-                // Street Address Field
+                                // Street Address Field
                 OutlinedTextField(
                     value = pickupSchedule.streetAddress,
                     onValueChange = { onScheduleUpdated(null, it, null, null, null) },
@@ -306,6 +310,49 @@ fun PickupSchedulingScreen(
                         .fillMaxWidth()
                         .testTag("street_address_textfield")
                 )
+                
+                // Select Nearest Hub Dropdown
+                var isHubDropdownExpanded by remember { mutableStateOf(false) }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedHub?.name ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Select Nearest Hub *") },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Dropdown",
+                                modifier = Modifier.clickable { isHubDropdownExpanded = true }
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = DeepBlue,
+                            unfocusedBorderColor = LightBlueBorder
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isHubDropdownExpanded = true }
+                            .testTag("hub_picker_dropdown")
+                    )
+
+                    DropdownMenu(
+                        expanded = isHubDropdownExpanded,
+                        onDismissRequest = { isHubDropdownExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.85f)
+                    ) {
+                        availableHubs.forEach { hub ->
+                            DropdownMenuItem(
+                                text = { Text("${hub.name} - ${hub.city ?: ""}", fontSize = 13.sp) },
+                                onClick = {
+                                    onHubSelected(hub)
+                                    isHubDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
 

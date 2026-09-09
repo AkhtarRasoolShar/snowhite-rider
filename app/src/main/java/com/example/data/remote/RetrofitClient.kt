@@ -22,15 +22,17 @@ object RetrofitClient {
             val request = chain.request()
             val url = request.url.toString()
 
+            var realResponse: Response? = null
             try {
                 // Try real network call first
-                val response = chain.proceed(request)
-                if (response.isSuccessful) {
-                    return response
+                realResponse = chain.proceed(request)
+                if (realResponse.isSuccessful) {
+                    return realResponse
                 }
             } catch (e: Throwable) {
                 // Fall back to simulated server response if network fails
             }
+            
 
             if (url.contains("action=login")) {
                 val mockLoginResponse = """
@@ -44,6 +46,7 @@ object RetrofitClient {
                     }
                 """.trimIndent()
 
+                realResponse?.close()
                 return Response.Builder()
                     .code(200)
                     .message("OK")
@@ -65,6 +68,7 @@ object RetrofitClient {
                     }
                 """.trimIndent()
 
+                realResponse?.close()
                 return Response.Builder()
                     .code(200)
                     .message("OK")
@@ -90,6 +94,7 @@ object RetrofitClient {
                     }
                 """.trimIndent()
 
+                realResponse?.close()
                 return Response.Builder()
                     .code(200)
                     .message("OK")
@@ -146,6 +151,7 @@ object RetrofitClient {
                     }
                 """.trimIndent()
 
+                realResponse?.close()
                 return Response.Builder()
                     .code(200)
                     .message("OK")
@@ -166,6 +172,7 @@ object RetrofitClient {
                         ]
                     }
                 """.trimIndent()
+                realResponse?.close()
                 return Response.Builder()
                     .code(200)
                     .message("OK")
@@ -188,6 +195,7 @@ object RetrofitClient {
                     }
                 """.trimIndent()
 
+                realResponse?.close()
                 return Response.Builder()
                     .code(200)
                     .message("OK")
@@ -222,6 +230,7 @@ object RetrofitClient {
                     }
                 """.trimIndent()
 
+                realResponse?.close()
                 return Response.Builder()
                     .code(200)
                     .message("OK")
@@ -231,7 +240,18 @@ object RetrofitClient {
                     .build()
             }
 
-            return chain.proceed(request)
+                        // If we get here, it means no mock matched.
+            if (realResponse != null) {
+                return realResponse
+            }
+            
+            return Response.Builder()
+                .code(503)
+                .message("Service Unavailable")
+                .protocol(Protocol.HTTP_1_1)
+                .request(request)
+                .body("{}".toResponseBody("application/json".toMediaType()))
+                .build()
         }
     }
 

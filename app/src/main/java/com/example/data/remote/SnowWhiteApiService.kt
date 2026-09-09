@@ -22,6 +22,9 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface SnowWhiteApiService {
+    @GET("api/routes.php?action=get_hubs")
+    suspend fun getHubs(): retrofit2.Response<com.example.data.model.GetHubsResponse>
+
     @GET("routes.php?action=get_promos")
     suspend fun getPromos(): retrofit2.Response<com.example.data.model.GetPromosResponse>
 
