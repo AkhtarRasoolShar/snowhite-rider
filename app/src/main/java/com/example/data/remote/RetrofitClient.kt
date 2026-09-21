@@ -161,6 +161,32 @@ object RetrofitClient {
                     .build()
             }
 
+            if (url.contains("action=get_hubs")) {
+                val mockHubsResponse = """
+                    {
+                        "success": true,
+                        "data": [
+                            {"id": 1, "name": "Clifton Central Hub", "address": "Block 4, Clifton, Karachi", "city": "Karachi", "is_active": 1},
+                            {"id": 2, "name": "DHA Phase 6 Hub", "address": "Shahbaz Commercial, DHA, Karachi", "city": "Karachi", "is_active": 1},
+                            {"id": 3, "name": "Gulshan-e-Iqbal Hub", "address": "Block 13-D, University Road, Karachi", "city": "Karachi", "is_active": 1},
+                            {"id": 4, "name": "PECHS / Tariq Road Hub", "address": "Block 2, PECHS, Karachi", "city": "Karachi", "is_active": 1},
+                            {"id": 5, "name": "North Nazimabad Hub", "address": "Block B, North Nazimabad, Karachi", "city": "Karachi", "is_active": 1},
+                            {"id": 6, "name": "Bahria Town Hub", "address": "Midway Commercial, Bahria Town, Karachi", "city": "Karachi", "is_active": 1},
+                            {"id": 7, "name": "Malir Cantt Hub", "address": "Falcon Complex, Malir, Karachi", "city": "Karachi", "is_active": 1},
+                            {"id": 8, "name": "Saddar Hub", "address": "Saddar Commercial Area, Karachi", "city": "Karachi", "is_active": 1}
+                        ]
+                    }
+                """.trimIndent()
+                realResponse?.close()
+                return Response.Builder()
+                    .code(200)
+                    .message("OK")
+                    .protocol(Protocol.HTTP_1_1)
+                    .request(request)
+                    .body(mockHubsResponse.toResponseBody("application/json".toMediaType()))
+                    .build()
+            }
+
             if (url.contains("action=get_banners")) {
                 val mockBannersResponse = """
                     {

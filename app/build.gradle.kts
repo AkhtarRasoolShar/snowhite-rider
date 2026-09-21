@@ -99,6 +99,7 @@ dependencies {
   // implementation(libs.androidx.room.ktx)
   // implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
+  implementation("io.coil-kt:coil-compose:2.4.0")
   implementation(libs.converter.moshi)
   implementation(libs.converter.gson)
   implementation(libs.gson)

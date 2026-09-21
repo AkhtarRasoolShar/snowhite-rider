@@ -24,11 +24,21 @@ class GreetingScreenshotTest {
       SnowWhiteTheme {
         HomeScreen(
           activeOrder = null,
+          categories = emptyList(),
+          products = emptyList(),
+          selectedCategoryId = null,
+          onCategorySelected = {},
+          getProductQuantity = { 0 },
+          onAddProduct = {},
+          onRemoveProduct = {},
+          totalCartPricePKR = 0,
+          totalCartCount = 0,
           onBookNowClick = {},
           onLaundryClick = {},
           onProductsClick = {},
           onReviewsClick = {},
-          onTrackActiveOrderClick = {}
+          onTrackActiveOrderClick = {},
+          onProceedToSchedule = {}
         )
       }
     }

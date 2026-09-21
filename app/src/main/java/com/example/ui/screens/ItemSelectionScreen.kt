@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +48,10 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +70,8 @@ import com.example.data.repository.CatalogData
 import com.example.ui.theme.DeepBlue
 import com.example.ui.theme.LightBlueBorder
 import com.example.ui.theme.SoftLightBlue
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
@@ -82,13 +90,24 @@ fun ItemSelectionScreen(
     onProceedToSchedule: () -> Unit,
     onBackClick: () -> Unit = {}
 ) {
-    val filteredItems = CatalogData.garmentItems.filter { item ->
-        val matchesCategory = item.category == selectedCategory
-        val matchesSearch = searchQuery.isBlank() || item.name.contains(searchQuery, ignoreCase = true) || item.description.contains(searchQuery, ignoreCase = true)
-        matchesCategory && matchesSearch
+    var selectedServiceFilter by remember { mutableStateOf("All") }
+
+    val filteredItems = remember(selectedCategory, searchQuery, selectedServiceFilter) {
+        CatalogData.garmentItems.filter { item ->
+            val matchesCategory = item.category == selectedCategory
+            val matchesService = when (selectedServiceFilter) {
+                "Dry Cleaning" -> item.description.contains("dry", ignoreCase = true) || item.name.contains("suit", ignoreCase = true) || item.name.contains("blazer", ignoreCase = true) || item.name.contains("gown", ignoreCase = true) || item.name.contains("abaya", ignoreCase = true) || item.iconName == "dry_cleaning"
+                "Wash & Fold" -> item.description.contains("wash", ignoreCase = true) || item.name.contains("shirt", ignoreCase = true) || item.name.contains("bed", ignoreCase = true) || item.name.contains("trousers", ignoreCase = true) || item.name.contains("blanket", ignoreCase = true)
+                "Steam Ironing" -> item.description.contains("press", ignoreCase = true) || item.description.contains("iron", ignoreCase = true) || item.name.contains("kameez", ignoreCase = true) || item.name.contains("saree", ignoreCase = true) || item.name.contains("shawl", ignoreCase = true)
+                else -> true
+            }
+            val matchesSearch = searchQuery.isBlank() || item.name.contains(searchQuery, ignoreCase = true) || item.description.contains(searchQuery, ignoreCase = true)
+            matchesCategory && matchesService && matchesSearch
+        }
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
         containerColor = Color(0xFFF7F9FC),
         bottomBar = {
             if (totalCartCount > 0) {
@@ -109,6 +128,7 @@ fun ItemSelectionScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .navigationBarsPadding()
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -285,10 +305,16 @@ fun ItemSelectionScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Dry Cleaning Chip
+                val isDryCleaning = selectedServiceFilter == "Dry Cleaning"
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = SoftLightBlue,
-                    modifier = Modifier.weight(1f)
+                    color = if (isDryCleaning) SoftLightBlue else Color(0xFFF1F5F9),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            selectedServiceFilter = if (isDryCleaning) "All" else "Dry Cleaning"
+                        }
+                        .testTag("filter_dry_cleaning_chip")
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -298,24 +324,30 @@ fun ItemSelectionScreen(
                         Icon(
                             imageVector = Icons.Default.DryCleaning,
                             contentDescription = "Dry Cleaning",
-                            tint = DeepBlue,
+                            tint = if (isDryCleaning) DeepBlue else Color(0xFF475569),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Dry Cleaning",
+                            text = "Dry Clean",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = DeepBlue
+                            fontWeight = if (isDryCleaning) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isDryCleaning) DeepBlue else Color(0xFF475569)
                         )
                     }
                 }
 
                 // Wash & Fold Chip
+                val isWashFold = selectedServiceFilter == "Wash & Fold"
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF1F5F9),
-                    modifier = Modifier.weight(1f)
+                    color = if (isWashFold) SoftLightBlue else Color(0xFFF1F5F9),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            selectedServiceFilter = if (isWashFold) "All" else "Wash & Fold"
+                        }
+                        .testTag("filter_wash_fold_chip")
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -325,24 +357,30 @@ fun ItemSelectionScreen(
                         Icon(
                             imageVector = Icons.Default.LocalLaundryService,
                             contentDescription = "Wash & Fold",
-                            tint = Color(0xFF475569),
+                            tint = if (isWashFold) DeepBlue else Color(0xFF475569),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Wash & Fold",
+                            text = "Wash/Fold",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF475569)
+                            fontWeight = if (isWashFold) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isWashFold) DeepBlue else Color(0xFF475569)
                         )
                     }
                 }
 
                 // Steam Ironing Chip
+                val isSteamIron = selectedServiceFilter == "Steam Ironing"
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF1F5F9),
-                    modifier = Modifier.weight(1f)
+                    color = if (isSteamIron) SoftLightBlue else Color(0xFFF1F5F9),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            selectedServiceFilter = if (isSteamIron) "All" else "Steam Ironing"
+                        }
+                        .testTag("filter_steam_iron_chip")
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -352,15 +390,15 @@ fun ItemSelectionScreen(
                         Icon(
                             imageVector = Icons.Default.Iron,
                             contentDescription = "Steam Ironing",
-                            tint = Color(0xFF475569),
+                            tint = if (isSteamIron) DeepBlue else Color(0xFF475569),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Steam Ironing",
+                            text = "Steam Iron",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF475569)
+                            fontWeight = if (isSteamIron) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSteamIron) DeepBlue else Color(0xFF475569)
                         )
                     }
                 }
@@ -369,7 +407,8 @@ fun ItemSelectionScreen(
             // Items List
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -392,21 +431,25 @@ fun ItemSelectionScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // LEFT: Garment Icon with a soft background circle
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(SoftLightBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (garment.iconName == "checkroom") Icons.Default.Checkroom else Icons.Default.DryCleaning,
-                                    contentDescription = garment.name,
-                                    tint = DeepBlue,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                            val garmentImgUrl = when {
+                                garment.name.contains("Suit", ignoreCase = true) -> "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&auto=format&fit=crop&q=60"
+                                garment.name.contains("Shirt", ignoreCase = true) -> "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&auto=format&fit=crop&q=60"
+                                garment.name.contains("Pants", ignoreCase = true) || garment.name.contains("Trousers", ignoreCase = true) -> "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400&auto=format&fit=crop&q=60"
+                                garment.name.contains("Dress", ignoreCase = true) || garment.name.contains("Gown", ignoreCase = true) || garment.name.contains("Lawn", ignoreCase = true) -> "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&auto=format&fit=crop&q=60"
+                                garment.name.contains("Bed", ignoreCase = true) || garment.name.contains("Sheet", ignoreCase = true) || garment.name.contains("Blanket", ignoreCase = true) -> "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400&auto=format&fit=crop&q=60"
+                                garment.name.contains("Curtain", ignoreCase = true) -> "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400&auto=format&fit=crop&q=60"
+                                else -> "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&auto=format&fit=crop&q=60"
                             }
+
+                            coil.compose.AsyncImage(
+                                model = garmentImgUrl,
+                                contentDescription = garment.name,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = androidx.compose.ui.Modifier
+                                    .size(60.dp)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                    .background(androidx.compose.ui.graphics.Color.LightGray)
+                            )
 
                             // MIDDLE: A Column for Title, Subtitle, and Price with Modifier.weight(1f)
                             Column(

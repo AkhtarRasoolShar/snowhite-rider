@@ -215,132 +215,135 @@ fun OrderHistoryScreen(
             .fillMaxSize()
             .testTag("order_history_screen")
     ) {
-        Column(
+        val remoteIds = effectiveRemoteOrders.map { it.displayOrderId }.toSet()
+        val filteredLocalOrders = localOrdersList.filter { it.orderId !in remoteIds }
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.testTag("orders_back_button")
+            item(key = "header") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                Column {
-                    Text(
-                        text = "My Laundry Orders",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Connected live to API (Customer Orders)",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier.testTag("orders_back_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "My Laundry Orders",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "Connected live to API (Customer Orders)",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
 
-            IconButton(
-                onClick = onRefreshOrders,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(SoftLightBlue)
-            ) {
-                if (isFetchingOrders) {
-                    CircularProgressIndicator(
-                        color = DeepBlue,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(18.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh Live Orders",
-                        tint = DeepBlue,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-
-        if (isFetchingOrders && effectiveRemoteOrders.isEmpty() && localOrdersList.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CircularProgressIndicator(color = DeepBlue, modifier = Modifier.size(40.dp))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Fetching live order history...", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            }
-        } else if (effectiveRemoteOrders.isEmpty() && localOrdersList.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                val emptyComposition by rememberLottieComposition(
-                    LottieCompositionSpec.Url("https://assets9.lottiefiles.com/packages/lf20_tmsiddoc.json")
-                )
-                val emptyProgress by animateLottieCompositionAsState(
-                    composition = emptyComposition,
-                    iterations = LottieConstants.IterateForever
-                )
-
-                if (emptyComposition != null) {
-                    LottieAnimation(
-                        composition = emptyComposition,
-                        progress = { emptyProgress },
-                        modifier = Modifier.size(160.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ListAlt,
-                        contentDescription = null,
-                        tint = LightBlueBorder,
-                        modifier = Modifier.size(64.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("No Order History Yet", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Your booked dry cleaning orders will appear here", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onBookNewOrderClick) {
-                    Text("Book First Order")
+                    IconButton(
+                        onClick = onRefreshOrders,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(SoftLightBlue)
+                    ) {
+                        if (isFetchingOrders) {
+                            CircularProgressIndicator(
+                                color = DeepBlue,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh Live Orders",
+                                tint = DeepBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
-        } else {
-            val remoteIds = effectiveRemoteOrders.map { it.displayOrderId }.toSet()
-            val filteredLocalOrders = localOrdersList.filter { it.orderId !in remoteIds }
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            if (isFetchingOrders && effectiveRemoteOrders.isEmpty() && localOrdersList.isEmpty()) {
+                item(key = "loading_state") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = DeepBlue, modifier = Modifier.size(40.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Fetching live order history...", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            } else if (effectiveRemoteOrders.isEmpty() && localOrdersList.isEmpty()) {
+                item(key = "empty_state") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        val emptyComposition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://assets9.lottiefiles.com/packages/lf20_tmsiddoc.json")
+                        )
+                        val emptyProgress by animateLottieCompositionAsState(
+                            composition = emptyComposition,
+                            iterations = LottieConstants.IterateForever
+                        )
+
+                        if (emptyComposition != null) {
+                            LottieAnimation(
+                                composition = emptyComposition,
+                                progress = { emptyProgress },
+                                modifier = Modifier.size(160.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ListAlt,
+                                contentDescription = null,
+                                tint = LightBlueBorder,
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("No Order History Yet", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Your booked dry cleaning orders will appear here", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBookNewOrderClick) {
+                            Text("Book First Order")
+                        }
+                    }
+                }
+            } else {
                 if (effectiveRemoteOrders.isNotEmpty()) {
                     items(effectiveRemoteOrders, key = { "remote_${it.displayOrderId}" }) { order ->
                         val statusText = order.displayStatus
@@ -545,7 +548,6 @@ fun OrderHistoryScreen(
                 }
             }
         }
-    }
     }
 
     // ModalBottomSheet for Order Details

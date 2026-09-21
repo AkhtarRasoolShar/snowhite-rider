@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -252,108 +253,123 @@ fun MainContainer(
                     contentWindowInsets = WindowInsets.systemBars,
                     containerColor = Color(0xFFF7F9FC),
                     topBar = {
-                        TopAppBarHeader(
-                            appName = uiState.appSettings.app_name ?: "SnowWhite",
-                            logoUrl = uiState.appSettings.logo_url,
-                            onOpenDrawer = {
-                                scope.launch { drawerState.open() }
-                            },
-                            onOpenCart = {
-                                viewModel.navigateTo(Screen.CartCheckout)
-                            },
-                            onOpenNotifications = {
-                                viewModel.navigateTo(Screen.NotificationsList)
-                            },
-                            onOpenProfile = {
-                                viewModel.navigateTo(Screen.Profile)
-                            },
-                            cartBadgeCount = viewModel.totalCartBadgeCount,
-                            notificationCount = uiState.notificationCount
-                        )
-                    },
-                    bottomBar = {
-                        NavigationBar(
-                            containerColor = Color.White,
-                            tonalElevation = 8.dp,
-                            modifier = Modifier.testTag("bottom_navigation_bar")
-                        ) {
-                            val currentScreen = uiState.currentScreen
-
-                            NavigationBarItem(
-                                selected = currentScreen is Screen.Home,
-                                onClick = { viewModel.navigateTo(Screen.Home) },
-                                icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                                label = { Text("Home", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = DeepBlue,
-                                    selectedTextColor = DeepBlue,
-                                    indicatorColor = SoftLightBlue
-                                ),
-                                modifier = Modifier.testTag("nav_item_home")
-                            )
-
-                            NavigationBarItem(
-                                selected = currentScreen is Screen.ServiceTierSelect || currentScreen is Screen.ItemSelection || currentScreen is Screen.PickupScheduling,
-                                onClick = { viewModel.navigateTo(Screen.ServiceTierSelect) },
-                                icon = { Icon(Icons.Default.LocalLaundryService, contentDescription = "Book") },
-                                label = { Text("Book", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = DeepBlue,
-                                    selectedTextColor = DeepBlue,
-                                    indicatorColor = SoftLightBlue
-                                ),
-                                modifier = Modifier.testTag("nav_item_book")
-                            )
-
-                            NavigationBarItem(
-                                selected = currentScreen is Screen.ProductsShop,
-                                onClick = { viewModel.navigateTo(Screen.ProductsShop) },
-                                icon = { Icon(Icons.Default.ShoppingBag, contentDescription = "Products") },
-                                label = { Text("Products", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = DeepBlue,
-                                    selectedTextColor = DeepBlue,
-                                    indicatorColor = SoftLightBlue
-                                ),
-                                modifier = Modifier.testTag("nav_item_products")
-                            )
-
-                            NavigationBarItem(
-                                selected = currentScreen is Screen.LiveOrderTracking,
-                                onClick = {
-                                    val activeId = uiState.currentActiveOrder?.orderId ?: "SW-78249"
-                                    viewModel.navigateTo(Screen.LiveOrderTracking(activeId))
+                        val shouldShowTopBar = uiState.currentScreen is Screen.Home
+                        if (shouldShowTopBar) {
+                            TopAppBarHeader(
+                                appName = uiState.appSettings.app_name ?: "SnowWhite",
+                                logoUrl = uiState.appSettings.logo_url,
+                                onOpenDrawer = {
+                                    scope.launch { drawerState.open() }
                                 },
-                                icon = { Icon(Icons.Default.TrackChanges, contentDescription = "Tracking") },
-                                label = { Text("Tracking", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = DeepBlue,
-                                    selectedTextColor = DeepBlue,
-                                    indicatorColor = SoftLightBlue
-                                ),
-                                modifier = Modifier.testTag("nav_item_tracking")
-                            )
-
-                            NavigationBarItem(
-                                selected = currentScreen is Screen.OrderHistory,
-                                onClick = { viewModel.navigateToOrdersTab() },
-                                icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Orders") },
-                                label = { Text("Orders", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = DeepBlue,
-                                    selectedTextColor = DeepBlue,
-                                    indicatorColor = SoftLightBlue
-                                ),
-                                modifier = Modifier.testTag("nav_item_orders")
+                                onOpenCart = {
+                                    viewModel.navigateTo(Screen.CartCheckout)
+                                },
+                                onOpenNotifications = {
+                                    viewModel.navigateTo(Screen.NotificationsList)
+                                },
+                                onOpenProfile = {
+                                    viewModel.navigateTo(Screen.Profile)
+                                },
+                                cartBadgeCount = viewModel.totalCartBadgeCount,
+                                notificationCount = uiState.notificationCount
                             )
                         }
                     },
-                    snackbarHost = { SnackbarHost(snackbarHostState) }
+                    bottomBar = {
+                        val shouldShowBottomBar = when (uiState.currentScreen) {
+                            Screen.Home,
+                            Screen.ServiceTierSelect,
+                            Screen.ProductsShop,
+                            is Screen.LiveOrderTracking,
+                            Screen.OrderHistory -> true
+                            else -> false
+                        }
+
+                        if (shouldShowBottomBar) {
+                            NavigationBar(
+                                containerColor = Color.White,
+                                tonalElevation = 8.dp,
+                                modifier = Modifier.testTag("bottom_navigation_bar")
+                            ) {
+                                val currentScreen = uiState.currentScreen
+
+                                NavigationBarItem(
+                                    selected = currentScreen is Screen.Home,
+                                    onClick = { viewModel.navigateTo(Screen.Home) },
+                                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                                    label = { Text("Home", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = DeepBlue,
+                                        selectedTextColor = DeepBlue,
+                                        indicatorColor = SoftLightBlue
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_home")
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentScreen is Screen.ServiceTierSelect || currentScreen is Screen.ItemSelection || currentScreen is Screen.PickupScheduling,
+                                    onClick = { viewModel.navigateTo(Screen.ServiceTierSelect) },
+                                    icon = { Icon(Icons.Default.LocalLaundryService, contentDescription = "Book") },
+                                    label = { Text("Book", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = DeepBlue,
+                                        selectedTextColor = DeepBlue,
+                                        indicatorColor = SoftLightBlue
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_book")
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentScreen is Screen.ProductsShop,
+                                    onClick = { viewModel.navigateTo(Screen.ProductsShop) },
+                                    icon = { Icon(Icons.Default.ShoppingBag, contentDescription = "Products") },
+                                    label = { Text("Products", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = DeepBlue,
+                                        selectedTextColor = DeepBlue,
+                                        indicatorColor = SoftLightBlue
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_products")
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentScreen is Screen.LiveOrderTracking,
+                                    onClick = {
+                                        val activeId = uiState.currentActiveOrder?.orderId ?: "SW-78249"
+                                        viewModel.navigateTo(Screen.LiveOrderTracking(activeId))
+                                    },
+                                    icon = { Icon(Icons.Default.TrackChanges, contentDescription = "Tracking") },
+                                    label = { Text("Tracking", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = DeepBlue,
+                                        selectedTextColor = DeepBlue,
+                                        indicatorColor = SoftLightBlue
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_tracking")
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentScreen is Screen.OrderHistory,
+                                    onClick = { viewModel.navigateToOrdersTab() },
+                                    icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Orders") },
+                                    label = { Text("Orders", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = DeepBlue,
+                                        selectedTextColor = DeepBlue,
+                                        indicatorColor = SoftLightBlue
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_orders")
+                                )
+                            }
+                        }
+                    },
+                    snackbarHost = {}
                 ) { innerPadding ->
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
+                            .padding(innerPadding),
+                        contentAlignment = Alignment.TopCenter
                     ) {
                         when (val currentScreen = uiState.currentScreen) {
                             Screen.Home -> HomeScreen(
@@ -406,12 +422,13 @@ fun MainContainer(
                             )
 
                             Screen.PickupScheduling -> {
+                                val hubs by viewModel.availableHubs.collectAsState()
                                 LaunchedEffect(Unit) {
                                     viewModel.fetchHubs()
                                 }
                                 PickupSchedulingScreen(
                                     pickupSchedule = uiState.pickupSchedule,
-                                    availableHubs = uiState.availableHubs,
+                                    availableHubs = if (hubs.isNotEmpty()) hubs else uiState.availableHubs,
                                     selectedHub = uiState.selectedHub,
                                     onHubSelected = { viewModel.selectHub(it) },
                                     onScheduleUpdated = { area, addr, date, slot, notes ->
@@ -453,6 +470,8 @@ fun MainContainer(
                                 onRemoveGarment = { viewModel.removeGarmentFromCart(it) },
                                 onAddProduct = { viewModel.addProductToCart(it) },
                                 onRemoveProduct = { viewModel.removeProductFromCart(it) },
+                                onAddCatalogProduct = { viewModel.addProductToCart(it) },
+                                onRemoveCatalogProduct = { viewModel.removeProductFromCart(it) },
                                 onProceedToSchedule = { viewModel.proceedToCheckout() },
                                 onContinueShopping = { viewModel.navigateTo(Screen.ServiceTierSelect) },
                                 onViewPreOrderInvoice = { viewModel.navigateToInvoice(isPreOrderQuote = true) },
@@ -558,6 +577,14 @@ fun MainContainer(
 
                             else -> {}
                         }
+
+                        // Top-positioned notification snackbar
+                        SnackbarHost(
+                            hostState = snackbarHostState,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 32.dp)
+                        )
                     }
                 }
             }

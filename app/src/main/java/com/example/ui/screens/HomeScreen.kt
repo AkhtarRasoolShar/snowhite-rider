@@ -27,7 +27,6 @@ import coil.compose.AsyncImage
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -47,6 +46,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -57,13 +57,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -111,20 +111,61 @@ fun HomeScreen(
     onTrackActiveOrderClick: () -> Unit,
     onProceedToSchedule: () -> Unit
 ) {
-    var selectedService by remember { mutableStateOf("Dry Cleaning") }
-    val servicesList = listOf("Dry Cleaning", "Wash & Fold", "Steam Ironing")
+    var selectedCategoryTab by remember { mutableStateOf("Dry Cleaning") }
+    val categoryTabs = listOf("Dry Cleaning", "Wash & Fold", "Steam Ironing", "Premium Care")
 
-    val baseFilteredProducts = products.filter { product ->
-        selectedCategoryId == null || product.category_id == selectedCategoryId
+    val allProducts = remember(products) {
+        val list = mutableListOf<Product>()
+
+        // 1. Dry Cleaning items
+        list.add(Product(id = 101, name = "2-Piece Suit", category_name = "Dry Cleaning", description = "Professional organic solvent dry cleaning & steam crease press", rawPrice = 350.0, image_url = "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 102, name = "Gentlemen Shirt", category_name = "Dry Cleaning", description = "Crisp hanger washing & dry steam finish", rawPrice = 150.0, image_url = "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 103, name = "Trousers / Pants", category_name = "Dry Cleaning", description = "Stain treatment & sharp crease press", rawPrice = 180.0, image_url = "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 104, name = "Shalwar Kameez", category_name = "Dry Cleaning", description = "Traditional 2-piece gentle fabric dry care", rawPrice = 300.0, image_url = "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 105, name = "Designer Dress / Gown", category_name = "Dry Cleaning", description = "Special organic solvent cleaning for delicate embroidery", rawPrice = 800.0, image_url = "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 106, name = "Silk Dupatta", category_name = "Dry Cleaning", description = "Eco silk care & gentle solvent hand wash finish", rawPrice = 160.0, image_url = "https://images.unsplash.com/photo-1609357605129-26f69add5d6e?w=400&auto=format&fit=crop&q=60"))
+
+        // 2. Wash & Fold items
+        list.add(Product(id = 201, name = "Daily Casual T-Shirts", category_name = "Wash & Fold", description = "Hygiene antibacterial wash & compact flat fold", rawPrice = 120.0, image_url = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 202, name = "Denim Jeans / Chinos", category_name = "Wash & Fold", description = "Deep rotary tumble wash, fabric softener & neat fold", rawPrice = 160.0, image_url = "https://images.unsplash.com/photo-1542272604-780c96856592?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 203, name = "Cotton Shalwar Kameez", category_name = "Wash & Fold", description = "Sanitizing hot wash, conditioner & crisp fold", rawPrice = 200.0, image_url = "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 204, name = "Double Bed Sheet Set", category_name = "Wash & Fold", description = "High temperature anti-allergen wash & compact roll", rawPrice = 350.0, image_url = "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 205, name = "Bath Towel Set (2x)", category_name = "Wash & Fold", description = "Fluff rinse, ultra-soft dryer finish & tidy fold", rawPrice = 180.0, image_url = "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=400&auto=format&fit=crop&q=60"))
+
+        // 3. Steam Ironing items
+        list.add(Product(id = 301, name = "Formal Dress Shirt", category_name = "Steam Ironing", description = "Industrial steam press, collar stiffening & wrinkle-free hanger", rawPrice = 80.0, image_url = "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 302, name = "Formal Trousers / Pants", category_name = "Steam Ironing", description = "Sharp front and back crease press", rawPrice = 90.0, image_url = "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 303, name = "Shalwar Suit Press", category_name = "Steam Ironing", description = "Complete 2-piece high-temperature steam press", rawPrice = 120.0, image_url = "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 304, name = "Lawn Kurti / Shirt", category_name = "Steam Ironing", description = "Delicate steam polish for ladies lawn & linen", rawPrice = 80.0, image_url = "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 305, name = "Bed Sheet & Pillowcases", category_name = "Steam Ironing", description = "Flat roller iron press for crisp hotel finish", rawPrice = 180.0, image_url = "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400&auto=format&fit=crop&q=60"))
+
+        // 4. Premium Care items
+        list.add(Product(id = 401, name = "Leather Jacket", category_name = "Premium Care", description = "Specialized leather conditioning, supple oil treatment & polish", rawPrice = 1500.0, image_url = "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 402, name = "Sherwani / Groom Wear", category_name = "Premium Care", description = "Handcrafted stain removal, metallic thread & velvet protection", rawPrice = 1800.0, image_url = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 403, name = "Bridal Lehenga", category_name = "Premium Care", description = "Intricate zardozi embroidery protection & steam finishing", rawPrice = 2500.0, image_url = "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=400&auto=format&fit=crop&q=60"))
+        list.add(Product(id = 404, name = "Heavy Wool Winter Overcoat", category_name = "Premium Care", description = "Pure wool de-linting, fabric revitalization & moth-proofing", rawPrice = 1200.0, image_url = "https://images.unsplash.com/photo-1544923246-77307dd654cb?w=400&auto=format&fit=crop&q=60"))
+
+        // Also if backend passed custom products with category_name, include them
+        if (products.isNotEmpty()) {
+            products.forEach { prod ->
+                if (!prod.category_name.isNullOrBlank()) {
+                    list.add(prod)
+                }
+            }
+        }
+
+        list
     }
-    
-    val filteredProducts = baseFilteredProducts
+
+    val filteredProducts = remember(selectedCategoryTab, allProducts) {
+        allProducts.filter { it.category_name?.equals(selectedCategoryTab, ignoreCase = true) == true }
+    }
 
     LaunchedEffect(Unit) {
         onRefresh()
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(OffWhiteBg)
@@ -133,13 +174,13 @@ fun HomeScreen(
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
         ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = if (totalCartCount > 0) 80.dp else 16.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
             // Active Order Banner if an order is currently in progress
@@ -239,13 +280,17 @@ fun HomeScreen(
                             val banner = appBanners[page]
                             Card(
                                 shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
                             ) {
                                 AsyncImage(
                                     model = banner.image_url,
                                     contentDescription = banner.title,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp)
                                 )
                             }
                         }
@@ -314,80 +359,49 @@ fun HomeScreen(
                 }
             }
 
-            // Dynamic ScrollableTabRow for Categories
-            if (categories.isNotEmpty()) {
-                item {
-                    val selectedIndex = categories.indexOfFirst { it.id == selectedCategoryId }.let { if (it < 0) 0 else it }
-                    val primaryBrandColor = Color(0xFF00B4D8)
+            // Dynamic ScrollableTabRow for Service Categories (Dry Cleaning, Wash & Fold, Steam Ironing, Premium Care)
+            item {
+                val primaryBrandColor = Color(0xFF00B4D8)
+                val selectedIndex = categoryTabs.indexOf(selectedCategoryTab).coerceAtLeast(0)
 
-                    ScrollableTabRow(
-                        selectedTabIndex = selectedIndex,
-                        containerColor = Color.White,
-                        contentColor = primaryBrandColor,
-                        edgePadding = 16.dp,
-                        indicator = { tabPositions ->
-                            if (selectedIndex in tabPositions.indices) {
-                                TabRowDefaults.SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                                    height = 3.dp,
-                                    color = primaryBrandColor
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        categories.forEach { category ->
-                            val isSelected = category.id == selectedCategoryId
-                            Tab(
-                                selected = isSelected,
-                                onClick = { category.id?.let { onCategorySelected(it) } },
-                                text = {
-                                    Text(
-                                        text = category.name ?: "Category",
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) primaryBrandColor else Color(0xFF64748B),
-                                        fontSize = 14.sp,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                }
+                ScrollableTabRow(
+                    selectedTabIndex = selectedIndex,
+                    containerColor = Color.White,
+                    contentColor = primaryBrandColor,
+                    edgePadding = 16.dp,
+                    indicator = { tabPositions ->
+                        if (selectedIndex in tabPositions.indices) {
+                            TabRowDefaults.SecondaryIndicator(
+                                Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
+                                height = 3.dp,
+                                color = primaryBrandColor
                             )
                         }
-                    }
-                }
-                
-                // Sub-Categories (Services)
-                item {
-                    val primaryBrandColor = Color(0xFF00B4D8)
-                    
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(servicesList) { service ->
-                            val isSelected = selectedService == service
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isSelected) primaryBrandColor else Color(0xFFF1F5F9))
-                                    .clickable { selectedService = service }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                    },
+                    modifier = Modifier.fillMaxWidth().testTag("home_category_tabs")
+                ) {
+                    categoryTabs.forEach { tabName ->
+                        val isSelected = tabName.equals(selectedCategoryTab, ignoreCase = true)
+                        Tab(
+                            selected = isSelected,
+                            onClick = {
+                                selectedCategoryTab = tabName
+                            },
+                            text = {
                                 Text(
-                                    text = service,
-                                    fontSize = 13.sp,
+                                    text = tabName,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) Color.White else Color(0xFF64748B)
+                                    color = if (isSelected) primaryBrandColor else Color(0xFF64748B),
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
-                        }
+                        )
                     }
                 }
             }
 
-            // Products List filtered by category tab
+            // Products List filtered strictly by selected category tab
             if (filteredProducts.isEmpty()) {
                 item {
                     Box(
@@ -397,7 +411,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No products found in this category.",
+                            text = "No products found in $selectedCategoryTab.",
                             fontSize = 13.sp,
                             color = Color(0xFF64748B)
                         )
@@ -406,24 +420,141 @@ fun HomeScreen(
             } else {
                 items(filteredProducts, key = { it.id ?: 0 }) { product ->
                     val qty = getProductQuantity(product.id)
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
-                        ProductCardItem(
-                            product = product,
-                            quantity = qty,
-                            selectedService = selectedService,
-                            onAdd = { onAddProduct(product) },
-                            onRemove = { onRemoveProduct(product) }
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        if (selectedCategoryTab == "Premium Care") {
+                            PremiumProductCardItem(
+                                product = product,
+                                quantity = qty,
+                                onAdd = { onAddProduct(product) },
+                                onRemove = { onRemoveProduct(product) }
+                            )
+                        } else {
+                            ProductCardItem(
+                                product = product,
+                                quantity = qty,
+                                selectedService = selectedCategoryTab,
+                                onAdd = { onAddProduct(product) },
+                                onRemove = { onRemoveProduct(product) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+        // Sticky Bottom Checkout Bar (Outside the LazyColumn)
+        if (totalCartCount > 0) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "$totalCartCount items in cart",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                        Text(
+                            text = "Rs. $totalCartPricePKR PKR",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp,
+                            color = DeepBlue
+                        )
+                    }
+
+                    Button(
+                        onClick = onProceedToSchedule,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DeepBlue,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier.testTag("home_sticky_checkout_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("Schedule Pickup", fontWeight = FontWeight.Bold)
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/**
+ * CustomerHomeScreen:
+ * Alias providing the exact same robust single LazyColumn layout with weight(1f)
+ * and sticky bottom button outside LazyColumn for customer home usage.
+ */
+@Composable
+fun CustomerHomeScreen(
+    appName: String = "SnowWhite",
+    appBanners: List<Banner> = emptyList(),
+    activeOrder: OrderEntity? = null,
+    services: List<ServiceItem> = emptyList(),
+    categories: List<Category> = emptyList(),
+    products: List<Product> = emptyList(),
+    selectedCategoryId: Int? = null,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
+    onCategorySelected: (Int) -> Unit = {},
+    getProductQuantity: (Int?) -> Int = { 0 },
+    onAddProduct: (Product) -> Unit = {},
+    onRemoveProduct: (Product) -> Unit = {},
+    totalCartPricePKR: Int = 0,
+    totalCartCount: Int = 0,
+    onBookNowClick: () -> Unit = {},
+    onLaundryClick: () -> Unit = {},
+    onProductsClick: () -> Unit = {},
+    onReviewsClick: () -> Unit = {},
+    onTrackActiveOrderClick: () -> Unit = {},
+    onProceedToSchedule: () -> Unit = {}
+) {
+    HomeScreen(
+        appName = appName,
+        appBanners = appBanners,
+        activeOrder = activeOrder,
+        services = services,
+        categories = categories,
+        products = products,
+        selectedCategoryId = selectedCategoryId,
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        onCategorySelected = onCategorySelected,
+        getProductQuantity = getProductQuantity,
+        onAddProduct = onAddProduct,
+        onRemoveProduct = onRemoveProduct,
+        totalCartPricePKR = totalCartPricePKR,
+        totalCartCount = totalCartCount,
+        onBookNowClick = onBookNowClick,
+        onLaundryClick = onLaundryClick,
+        onProductsClick = onProductsClick,
+        onReviewsClick = onReviewsClick,
+        onTrackActiveOrderClick = onTrackActiveOrderClick,
+        onProceedToSchedule = onProceedToSchedule
+    )
 }
 
 @Composable
-private fun ProductCardItem(
+fun ProductCardItem(
     product: Product,
     quantity: Int,
     selectedService: String,
@@ -447,19 +578,25 @@ private fun ProductCardItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val defaultImg = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSDAJkXtsNkzYsDhu_BhNUwLD82d47UMkHFx2JCjoZFw&s"
+            val defaultImg = when {
+                product.name?.contains("Suit", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&auto=format&fit=crop&q=60"
+                product.name?.contains("Shirt", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&auto=format&fit=crop&q=60"
+                product.name?.contains("Pants", ignoreCase = true) == true || product.name?.contains("Trousers", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400&auto=format&fit=crop&q=60"
+                product.name?.contains("Dress", ignoreCase = true) == true || product.name?.contains("Gown", ignoreCase = true) == true || product.name?.contains("Lawn", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&auto=format&fit=crop&q=60"
+                product.name?.contains("Bed", ignoreCase = true) == true || product.name?.contains("Sheet", ignoreCase = true) == true || product.name?.contains("Blanket", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400&auto=format&fit=crop&q=60"
+                product.name?.contains("Curtain", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400&auto=format&fit=crop&q=60"
+                else -> "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&auto=format&fit=crop&q=60"
+            }
             val imgUrl = if (product.image_url.isNullOrBlank()) defaultImg else product.image_url
 
             coil.compose.AsyncImage(
-                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                    .data(imgUrl)
-                    .crossfade(true)
-                    .build(),
+                model = imgUrl,
                 contentDescription = product.name,
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = androidx.compose.ui.Modifier
+                    .size(60.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .background(androidx.compose.ui.graphics.Color.LightGray)
             )
             Spacer(modifier = Modifier.width(14.dp))
             Column(
@@ -484,15 +621,8 @@ private fun ProductCardItem(
                         lineHeight = 16.sp
                     )
                 }
-                val priceMultiplier = when (selectedService) {
-                    "Wash & Fold" -> 0.6
-                    "Steam Ironing" -> 0.4
-                    else -> 1.0
-                }
-                val adjustedPrice = product.price * priceMultiplier
-
                 Text(
-                    text = "Rs. ${adjustedPrice.toInt()} PKR",
+                    text = "Rs. ${product.price.toInt()} PKR",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = primaryBrandColor
@@ -546,7 +676,7 @@ private fun ProductCardItem(
                     colors = ButtonDefaults.buttonColors(containerColor = primaryBrandColor.copy(alpha = 0.1f)),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier.height(36.dp).testTag("add_product_${product.id}")
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -572,7 +702,160 @@ private fun ProductCardItem(
 }
 
 @Composable
-private fun BentoCategoryTile(
+fun PremiumProductCardItem(
+    product: Product,
+    quantity: Int,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val primaryBrandColor = Color(0xFF00B4D8)
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("premium_product_card_${product.id}"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val imgUrl = product.image_url.takeIf { !it.isNullOrBlank() } ?: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&auto=format&fit=crop&q=60"
+
+            coil.compose.AsyncImage(
+                model = imgUrl,
+                contentDescription = product.name,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = androidx.compose.ui.Modifier
+                    .size(60.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .background(androidx.compose.ui.graphics.Color.LightGray)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = product.name ?: "Premium Item",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0F172A),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        color = Color(0xFFFEF3C7),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "PREMIUM",
+                            color = Color(0xFFD97706),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                if (!product.description.isNullOrBlank()) {
+                    Text(
+                        text = product.description,
+                        fontSize = 12.sp,
+                        color = Color(0xFF64748B),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 16.sp
+                    )
+                }
+                Text(
+                    text = "Rs. ${product.price.toInt()} PKR",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryBrandColor
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            // +/- Quantity Selector with Brand Colors
+            if (quantity > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(primaryBrandColor.copy(alpha = 0.1f))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    IconButton(
+                        onClick = onRemove,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = "Remove",
+                            tint = primaryBrandColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Text(
+                        text = "$quantity",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = primaryBrandColor,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    IconButton(
+                        onClick = onAdd,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add",
+                            tint = primaryBrandColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            } else {
+                Button(
+                    onClick = onAdd,
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryBrandColor.copy(alpha = 0.1f)),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    modifier = Modifier.height(36.dp).testTag("add_premium_${product.id}")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add",
+                            tint = primaryBrandColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "ADD",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryBrandColor
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BentoCategoryTile(
     modifier: Modifier = Modifier,
     title: String,
     tag: String,
@@ -624,7 +907,7 @@ private fun BentoCategoryTile(
 }
 
 @Composable
-private fun FeatureHighlightCard(
+fun FeatureHighlightCard(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     title: String,

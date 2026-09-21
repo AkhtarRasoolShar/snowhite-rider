@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarToday
@@ -33,12 +35,16 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,19 +59,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.PickupSchedule
 import com.example.data.model.Hub
-import com.example.data.repository.CatalogData
-import com.example.ui.theme.DeepBlue
-import com.example.ui.theme.LightBlueBorder
-import com.example.ui.theme.SoftLightBlue
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.ExperimentalMaterial3Api
-import com.example.ui.components.GoogleMapAddressPickerModal
-
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.IconButton
+import com.example.data.repository.CatalogData
+import com.example.ui.components.GoogleMapAddressPickerModal
+import com.example.ui.theme.DeepBlue
+import com.example.ui.theme.LightBlueBorder
+import com.example.ui.theme.SoftLightBlue
+
+typealias PickupScheduleEntity = PickupSchedule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +89,36 @@ fun PickupSchedulingScreen(
     onBackClick: () -> Unit = {}
 ) {
     var isAreaDropdownExpanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
     var isMapPickerVisible by remember { mutableStateOf(false) }
+
+    // Auto-Select Hub Based on Location (Area)
+    LaunchedEffect(pickupSchedule.area, availableHubs) {
+        val currentArea = pickupSchedule.area.trim()
+        if (currentArea.isNotBlank() && availableHubs.isNotEmpty()) {
+            val matchedHub = availableHubs.firstOrNull { hub ->
+                val hubName = hub.name.orEmpty().trim()
+                val hubAddress = hub.address.orEmpty().trim()
+                if (hubName.isBlank()) {
+                    false
+                } else {
+                    // Check if hub name matches or is contained in the area text, or vice versa (ignore case)
+                    currentArea.contains(hubName, ignoreCase = true) ||
+                    hubName.contains(currentArea, ignoreCase = true) ||
+                    // Check individual meaningful location tokens (e.g. Clifton, DHA, Gulshan, PECHS, Nazimabad, Malir, Bahria, Saddar)
+                    currentArea.split(" ", ",", "/", "-", "(", ")")
+                        .map { it.trim().lowercase() }
+                        .filter { it.length > 2 && it !in listOf("karachi", "scheme", "block", "blocks", "phase", "road", "near", "sector") }
+                        .any { word ->
+                            hubName.lowercase().contains(word) || hubAddress.lowercase().contains(word)
+                        }
+                }
+            }
+            if (matchedHub != null && matchedHub.id != selectedHub?.id) {
+                onHubSelected(matchedHub)
+            }
+        }
+    }
 
     val datesList = listOf(
         "Today, 31st Aug",
@@ -102,50 +138,59 @@ fun PickupSchedulingScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-            .testTag("pickup_scheduling_screen"),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .imePadding()
+            .navigationBarsPadding()
+            .testTag("pickup_scheduling_screen")
     ) {
-        // Header with Back Button
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.testTag("checkout_back_button")
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = "Schedule Pickup & Address",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "SnoWhite rider will collect your garments from your doorstep in Karachi",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // Section 1: Address & Karachi Area Picker
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
+                .weight(1f)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Header with Back Button
+            item(key = "header") {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.testTag("checkout_back_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Schedule Pickup & Address",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "SnoWhite rider will collect your garments from your doorstep in Karachi",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Section 1: Address & Karachi Area Picker
+            item(key = "address_section") {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, LightBlueBorder, RoundedCornerShape(20.dp))
+                ) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -254,18 +299,21 @@ fun PickupSchedulingScreen(
                 }
 
                 // Area Picker Dropdown
-                Box(modifier = Modifier.fillMaxWidth()) {
+                ExposedDropdownMenuBox(
+                    expanded = isAreaDropdownExpanded,
+                    onExpandedChange = { isAreaDropdownExpanded = !isAreaDropdownExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     OutlinedTextField(
                         value = pickupSchedule.area,
-                        onValueChange = {},
-                        readOnly = true,
+                        onValueChange = { newArea ->
+                            onScheduleUpdated(newArea, null, null, null, null)
+                        },
+                        readOnly = false,
                         label = { Text("Karachi Area / Sector") },
+                        placeholder = { Text("Type or select (e.g. Clifton, DHA)") },
                         trailingIcon = {
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = "Dropdown",
-                                modifier = Modifier.clickable { isAreaDropdownExpanded = true }
-                            )
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = isAreaDropdownExpanded)
                         },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = DeepBlue,
@@ -274,14 +322,16 @@ fun PickupSchedulingScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isAreaDropdownExpanded = true }
+                            .menuAnchor()
                             .testTag("area_picker_dropdown")
                     )
 
                     DropdownMenu(
                         expanded = isAreaDropdownExpanded,
                         onDismissRequest = { isAreaDropdownExpanded = false },
-                        modifier = Modifier.fillMaxWidth(0.85f)
+                        modifier = Modifier
+                            .background(Color.White)
+                            .fillMaxWidth(0.9f)
                     ) {
                         CatalogData.karachiAreas.forEach { area ->
                             DropdownMenuItem(
@@ -295,7 +345,7 @@ fun PickupSchedulingScreen(
                     }
                 }
 
-                                // Street Address Field
+                // Street Address Field
                 OutlinedTextField(
                     value = pickupSchedule.streetAddress,
                     onValueChange = { onScheduleUpdated(null, it, null, null, null) },
@@ -311,20 +361,20 @@ fun PickupSchedulingScreen(
                         .testTag("street_address_textfield")
                 )
                 
-                // Select Nearest Hub Dropdown
-                var isHubDropdownExpanded by remember { mutableStateOf(false) }
-                Box(modifier = Modifier.fillMaxWidth()) {
+                // Select Nearest Hub Dropdown (ExposedDropdownMenuBox)
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     OutlinedTextField(
                         value = selectedHub?.name ?: "",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Select Nearest Hub *") },
+                        placeholder = { Text("Select Nearest Hub") },
                         trailingIcon = {
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = "Dropdown",
-                                modifier = Modifier.clickable { isHubDropdownExpanded = true }
-                            )
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                         },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = DeepBlue,
@@ -333,31 +383,89 @@ fun PickupSchedulingScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isHubDropdownExpanded = true }
+                            .menuAnchor()
                             .testTag("hub_picker_dropdown")
                     )
 
-                    DropdownMenu(
-                        expanded = isHubDropdownExpanded,
-                        onDismissRequest = { isHubDropdownExpanded = false },
-                        modifier = Modifier.fillMaxWidth(0.85f)
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier
+                            .background(Color.White)
                     ) {
-                        availableHubs.forEach { hub ->
+                        if (availableHubs.isEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("${hub.name} - ${hub.city ?: ""}", fontSize = 13.sp) },
-                                onClick = {
-                                    onHubSelected(hub)
-                                    isHubDropdownExpanded = false
-                                }
+                                text = { Text("Loading hubs...", fontSize = 13.sp, color = Color.Gray) },
+                                onClick = { expanded = false }
                             )
+                        } else {
+                            availableHubs.forEach { hub ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = hub.name ?: "Hub",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = if (hub.id == selectedHub?.id) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (hub.id == selectedHub?.id) DeepBlue else Color(0xFF0F172A)
+                                                )
+                                                if (hub.id == selectedHub?.id) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "Selected",
+                                                        tint = DeepBlue,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                            }
+                                            if (!hub.address.isNullOrBlank()) {
+                                                Text(
+                                                    text = "${hub.address}${if (!hub.city.isNullOrBlank()) ", ${hub.city}" else ""}",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF64748B)
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        onHubSelected(hub)
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
+                    }
+                }
+
+                if (selectedHub != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Assigned Hub: ${selectedHub.name}",
+                            fontSize = 11.sp,
+                            color = Color(0xFF059669),
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
         }
+    }
 
-        // Section 2: Date Selector
-        Card(
+            // Section 2: Date Selector
+            item(key = "date_section") {
+                Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -426,9 +534,11 @@ fun PickupSchedulingScreen(
                 }
             }
         }
+    }
 
-        // Section 3: Time Slot Selector
-        Card(
+            // Section 3: Time Slot Selector
+            item(key = "time_section") {
+                Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -497,47 +607,63 @@ fun PickupSchedulingScreen(
                 }
             }
         }
+    }
 
-        // Section 4: Special Instructions
-        OutlinedTextField(
-            value = pickupSchedule.specialNotes,
-            onValueChange = { onScheduleUpdated(null, null, null, null, it) },
-            label = { Text("Special Garment Notes (e.g. Collar stain, Extra Starch)") },
-            leadingIcon = { Icon(Icons.Default.EditNote, contentDescription = null, tint = DeepBlue) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = DeepBlue,
-                unfocusedBorderColor = LightBlueBorder,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            ),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("special_instructions_textfield")
-        )
-
-        // Order Total & Submit CTA Button
-        Button(
-            onClick = onConfirmOrderClick,
-            enabled = !isSubmitting && totalCartCount > 0,
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = DeepBlue,
-                contentColor = Color.White
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-                .testTag("confirm_and_book_order_button")
-        ) {
-            if (isSubmitting) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-            } else {
-                Text(
-                    text = "Confirm Order • Rs. $totalPricePKR PKR",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+            // Section 4: Special Instructions
+            item(key = "special_instructions_section") {
+                OutlinedTextField(
+                    value = pickupSchedule.specialNotes,
+                    onValueChange = { onScheduleUpdated(null, null, null, null, it) },
+                    label = { Text("Special Garment Notes (e.g. Collar stain, Extra Starch)") },
+                    leadingIcon = { Icon(Icons.Default.EditNote, contentDescription = null, tint = DeepBlue) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = DeepBlue,
+                        unfocusedBorderColor = LightBlueBorder,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("special_instructions_textfield")
                 )
+            }
+        }
+
+        // Order Total & Submit Sticky Bottom CTA Button (Outside the LazyColumn)
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Button(
+                    onClick = onConfirmOrderClick,
+                    enabled = !isSubmitting && totalCartCount > 0,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DeepBlue,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .testTag("confirm_and_book_order_button")
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = "Confirm Order • Rs. $totalPricePKR PKR",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
             }
         }
 
@@ -554,4 +680,36 @@ fun PickupSchedulingScreen(
             )
         }
     }
+}
+
+/**
+ * AddressScreen:
+ * Alias providing the exact same robust single LazyColumn layout with weight(1f)
+ * and sticky bottom button outside LazyColumn for checkout address scheduling.
+ */
+@Composable
+fun AddressScreen(
+    totalCartCount: Int,
+    totalPricePKR: Int,
+    pickupSchedule: PickupSchedule,
+    isSubmitting: Boolean = false,
+    availableHubs: List<Hub> = emptyList(),
+    selectedHub: Hub? = null,
+    onHubSelected: (Hub) -> Unit = {},
+    onScheduleUpdated: (area: String?, streetAddress: String?, date: String?, timeSlot: String?, specialNotes: String?) -> Unit,
+    onConfirmOrderClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    PickupSchedulingScreen(
+        totalCartCount = totalCartCount,
+        totalPricePKR = totalPricePKR,
+        pickupSchedule = pickupSchedule,
+        isSubmitting = isSubmitting,
+        availableHubs = availableHubs,
+        selectedHub = selectedHub,
+        onHubSelected = onHubSelected,
+        onScheduleUpdated = onScheduleUpdated,
+        onConfirmOrderClick = onConfirmOrderClick,
+        onBackClick = onBackClick
+    )
 }

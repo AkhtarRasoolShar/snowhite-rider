@@ -130,6 +130,9 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    private val _availableHubs = MutableStateFlow<List<com.example.data.model.Hub>>(emptyList())
+    val availableHubs: StateFlow<List<com.example.data.model.Hub>> = _availableHubs.asStateFlow()
+
     fun fetchSettings() {
         viewModelScope.launch {
             try {
@@ -202,8 +205,9 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
         // Start with clean empty cart so users add what they actually want
         _uiState.update { it.copy(cartItems = emptyList()) }
 
-        // Fetch customer live orders, dynamic services & categories/products on startup (COLD START FIX)
+        // Fetch customer live orders, dynamic services, hubs & categories/products on startup (COLD START FIX)
         fetchServices()
+        fetchHubs()
         // fetchCategoriesAndProducts() handled by MainContainer
 
         if (userId > 0) {
@@ -1433,6 +1437,17 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
 
+    private val defaultKarachiHubs = listOf(
+        com.example.data.model.Hub(id = 1, name = "Clifton Central Hub", address = "Block 4, Clifton, Karachi", city = "Karachi", isActive = 1),
+        com.example.data.model.Hub(id = 2, name = "DHA Phase 6 Hub", address = "Shahbaz Commercial, DHA, Karachi", city = "Karachi", isActive = 1),
+        com.example.data.model.Hub(id = 3, name = "Gulshan-e-Iqbal Hub", address = "Block 13-D, University Road, Karachi", city = "Karachi", isActive = 1),
+        com.example.data.model.Hub(id = 4, name = "PECHS / Tariq Road Hub", address = "Block 2, PECHS, Karachi", city = "Karachi", isActive = 1),
+        com.example.data.model.Hub(id = 5, name = "North Nazimabad Hub", address = "Block B, North Nazimabad, Karachi", city = "Karachi", isActive = 1),
+        com.example.data.model.Hub(id = 6, name = "Bahria Town Hub", address = "Midway Commercial, Bahria Town, Karachi", city = "Karachi", isActive = 1),
+        com.example.data.model.Hub(id = 7, name = "Malir Cantt Hub", address = "Falcon Complex, Malir, Karachi", city = "Karachi", isActive = 1),
+        com.example.data.model.Hub(id = 8, name = "Saddar Hub", address = "Saddar Commercial Area, Karachi", city = "Karachi", isActive = 1)
+    )
+
     fun selectHub(hub: com.example.data.model.Hub) {
         _uiState.update { it.copy(selectedHub = hub) }
     }
@@ -1442,11 +1457,18 @@ class SnowWhiteViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 val response = RetrofitClient.apiService.getHubs()
                 if (response.isSuccessful) {
-                    val hubs = response.body()?.data ?: response.body()?.hubs ?: emptyList()
+                    val rawHubs = response.body()?.data ?: response.body()?.hubs ?: emptyList()
+                    val hubs = if (rawHubs.isNotEmpty()) rawHubs else defaultKarachiHubs
+                    _availableHubs.value = hubs
                     _uiState.update { it.copy(availableHubs = hubs) }
+                } else {
+                    _availableHubs.value = defaultKarachiHubs
+                    _uiState.update { it.copy(availableHubs = defaultKarachiHubs) }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("SnowWhiteViewModel", "Error fetching hubs: ${e.message}", e)
+                _availableHubs.value = defaultKarachiHubs
+                _uiState.update { it.copy(availableHubs = defaultKarachiHubs) }
             }
         }
     }

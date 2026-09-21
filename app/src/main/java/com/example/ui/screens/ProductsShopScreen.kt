@@ -41,6 +41,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.data.model.Product
 import com.example.data.repository.CatalogData
 import com.example.ui.theme.DeepBlue
@@ -135,20 +137,23 @@ fun ProductsShopScreen(
                             modifier = Modifier.weight(1f),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(SoftLightBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ShoppingBag,
-                                    contentDescription = product.name.orEmpty(),
-                                    tint = DeepBlue,
-                                    modifier = Modifier.size(28.dp)
-                                )
+                            val fallbackProductImg = when {
+                                product.name?.contains("Detergent", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=400&auto=format&fit=crop&q=60"
+                                product.name?.contains("Conditioner", ignoreCase = true) == true || product.name?.contains("Softener", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&auto=format&fit=crop&q=60"
+                                product.name?.contains("Bleach", ignoreCase = true) == true || product.name?.contains("Stain", ignoreCase = true) == true -> "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=400&auto=format&fit=crop&q=60"
+                                else -> "https://images.unsplash.com/photo-1585421514738-01798e348b17?w=400&auto=format&fit=crop&q=60"
                             }
+                            val resolvedImg = if (product.image_url.isNullOrBlank()) fallbackProductImg else product.image_url
+
+                            coil.compose.AsyncImage(
+                                model = resolvedImg,
+                                contentDescription = product.name,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = androidx.compose.ui.Modifier
+                                    .size(60.dp)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                    .background(androidx.compose.ui.graphics.Color.LightGray)
+                            )
 
                             Spacer(modifier = Modifier.width(12.dp))
 
@@ -299,3 +304,27 @@ fun ProductsShopScreen(
         }
     }
 }
+
+@Composable
+fun PremiumCareScreen(
+    getProductQuantity: (Int?) -> Int,
+    onAddProduct: (Product) -> Unit,
+    retailProducts: List<Product>,
+    onRemoveProduct: (Product) -> Unit,
+    totalCartCount: Int,
+    totalCartPricePKR: Int,
+    onViewCartClick: () -> Unit,
+    onBackClick: () -> Unit = {}
+) {
+    ProductsShopScreen(
+        getProductQuantity = getProductQuantity,
+        onAddProduct = onAddProduct,
+        retailProducts = retailProducts,
+        onRemoveProduct = onRemoveProduct,
+        totalCartCount = totalCartCount,
+        totalCartPricePKR = totalCartPricePKR,
+        onViewCartClick = onViewCartClick,
+        onBackClick = onBackClick
+    )
+}
+

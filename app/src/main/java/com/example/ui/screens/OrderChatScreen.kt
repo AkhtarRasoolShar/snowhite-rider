@@ -256,7 +256,6 @@ fun OrderChatScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(OffWhiteBg)
-            .statusBarsPadding()
             .imePadding()
             .navigationBarsPadding()
             .testTag("order_chat_screen")

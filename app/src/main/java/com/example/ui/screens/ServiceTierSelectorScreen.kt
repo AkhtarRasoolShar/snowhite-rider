@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -130,7 +131,10 @@ fun ServiceTierSelectorScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.weight(1f, fill = false),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 RadioButton(
                                     selected = isSelected,
                                     onClick = { onTierSelected(tier) },
@@ -140,7 +144,7 @@ fun ServiceTierSelectorScreen(
                                 Column {
                                     Text(
                                         text = tier.title,
-                                        fontSize = 16.sp,
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onBackground
                                     )
@@ -151,34 +155,38 @@ fun ServiceTierSelectorScreen(
                                         Icon(
                                             imageVector = if (tier == ServiceTierType.EXPRESS) Icons.Default.FlashOn else Icons.Default.Schedule,
                                             contentDescription = null,
-                                            tint = if (tier == ServiceTierType.EXPRESS) ExpressOrange else DeepBlue,
-                                            modifier = Modifier.size(14.dp)
+                                            tint = if (tier == ServiceTierType.EXPRESS) Color(0xFFDC2626) else DeepBlue,
+                                            modifier = Modifier.size(13.dp)
                                         )
                                         Text(
                                             text = tier.deliveryTime,
-                                            fontSize = 12.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = if (tier == ServiceTierType.EXPRESS) ExpressOrange else DeepBlue
+                                            color = if (tier == ServiceTierType.EXPRESS) Color(0xFFDC2626) else DeepBlue
                                         )
                                     }
                                 }
                             }
 
-                            // Badge
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .background(
-                                        if (tier == ServiceTierType.EXPRESS) ExpressOrange.copy(alpha = 0.15f)
-                                        else DeepBlue.copy(alpha = 0.1f)
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            // Distinct neatly-styled Badge on the right
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = when (tier) {
+                                    ServiceTierType.EXPRESS -> Color(0xFFFEE2E2)
+                                    ServiceTierType.REGULAR -> Color(0xFFE0F2FE)
+                                    ServiceTierType.ECONO -> Color(0xFFFEF3C7)
+                                }
                             ) {
                                 Text(
                                     text = tier.badgeText,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (tier == ServiceTierType.EXPRESS) ExpressOrange else DeepBlue
+                                    color = when (tier) {
+                                        ServiceTierType.EXPRESS -> Color(0xFFDC2626)
+                                        ServiceTierType.REGULAR -> DeepBlue
+                                        ServiceTierType.ECONO -> Color(0xFFB45309)
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }

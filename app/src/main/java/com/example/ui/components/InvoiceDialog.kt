@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -97,6 +98,7 @@ fun InvoiceDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
+                .widthIn(max = 520.dp)
                 .padding(vertical = 16.dp)
                 .testTag("invoice_dialog_surface"),
             shape = RoundedCornerShape(24.dp),

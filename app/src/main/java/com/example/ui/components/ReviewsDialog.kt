@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +53,7 @@ fun ReviewsDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = 480.dp)
                 .padding(vertical = 16.dp)
                 .testTag("reviews_dialog"),
             shape = RoundedCornerShape(24.dp),
@@ -105,7 +108,7 @@ fun ReviewsDialog(
 
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.height(360.dp)
+                    modifier = Modifier.heightIn(max = 400.dp)
                 ) {
                     items(CatalogData.customerReviews) { review ->
                         Card(
